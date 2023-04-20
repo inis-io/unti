@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1,minimum-scale=1">
+    <!--让IE使用最新的渲染模式，支持CSS3-->
+    <meta http-equiv="X-UA-Compatible" content="IE-edge,chrome=1">
+
+    <title>Title</title>
+    <!-- favicon.ico -->
+    <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon">
+    <script src="https://api.inis.cn/admin/utils/helper.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+</div>
+
+<script>
+
+    (async () => {
+
+        const utils = inisHelper
+
+        const { code, msg, data } = await utils.fetch.post('/api/comm/login', {
+            account: 'inis',
+            password: '123456'
+        })
+
+        if (code !== 200) return console.log(msg)
+
+        console.log(data)
+
+    })()
+
+
+
+
+
+// const key = CryptoJS.enc.Utf8.parse('oingtx47safd756s')
+// const iv  = CryptoJS.enc.Utf8.parse('mhytanglki872311')
+// const plaintext = 'inis'
+//
+// // 加密
+// const ciphertext = CryptoJS.AES.encrypt(plaintext, key, {
+//     iv: iv,
+//     mode: CryptoJS.mode.CBC,
+//     padding: CryptoJS.pad.Pkcs7,
+// })
+// // 加密结果转base64字符串
+// console.log('加密结果：', ciphertext.toString())
+//
+// // 解密
+// const decrypted = CryptoJS.AES.decrypt(ciphertext, key, {
+//     iv: iv,
+//     mode: CryptoJS.mode.CBC,
+//     padding: CryptoJS.pad.Pkcs7,
+// })
+// console.log('解密结果：' + decrypted.toString(CryptoJS.enc.Utf8))
+</script>
+</body>
+</html>
