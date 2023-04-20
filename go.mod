@@ -21,8 +21,8 @@ require (
 	github.com/qiniu/go-sdk/v7 v7.14.0
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/spf13/cast v1.5.0
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.642
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.642
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.643
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.643
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
 	github.com/unrolled/secure v1.13.0
 	github.com/unti-io/go-utils v1.1.0
@@ -44,7 +44,7 @@ require (
 	github.com/bytedance/sonic v1.8.7 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/chromedp/cdproto v0.0.0-20230413093208-7497fc11fc57 // indirect
+	github.com/chromedp/cdproto v0.0.0-20230419194459-b5ff65bc57a3 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/clbanning/mxj/v2 v2.5.7 // indirect
