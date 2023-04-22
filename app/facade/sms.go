@@ -13,6 +13,7 @@ import (
 	TencentCloud "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
 	"github.com/unti-io/go-utils/utils"
 	"gopkg.in/gomail.v2"
+	"strings"
 )
 
 func init() {
@@ -28,6 +29,35 @@ func init() {
 	SMSToml.Viper.OnConfigChange(func(event fsnotify.Event) {
 		initSMS()
 	})
+}
+
+const (
+	// SMSModeEmail - 邮件
+	SMSModeEmail = "email"
+	// SMSModeAliYun - 阿里云
+	SMSModeAliYun = "aliyun"
+	// SMSModeTencent - 腾讯云
+	SMSModeTencent = "tencent"
+)
+
+// NewSMS - 创建SMS实例
+/**
+ * @param mode 驱动模式
+ * @return SMSInterface
+ * @example：
+ * 1. sms := facade.NewSMS("email")
+ * 2. sms := facade.NewSMS(facade.SMSModeEmail)
+ */
+func NewSMS(mode any) SMSInterface {
+	switch strings.ToLower(cast.ToString(mode)) {
+	case "email":
+		SMS = GoMail
+	case "aliyun":
+		SMS = SMSAliYun
+	case "tencent":
+		SMS = SMSTencent
+	}
+	return SMS
 }
 
 // SMSToml - SMS配置文件
@@ -177,7 +207,12 @@ func initSMS() {
 	}
 }
 
-// SMS - 短信
+// SMS - SMS实例
+/**
+ * @return SMSInterface
+ * @example：
+ * sms := facade.SMS.VerifyCode("手机号", "验证码")
+ */
 var SMS SMSInterface
 var GoMail *GoMailRequest
 // SMSAliYun - 阿里云短信
@@ -187,7 +222,13 @@ var SMSTencent *TencentSMS
 
 // SMSInterface - 短信接口
 type SMSInterface interface {
-	// VerifyCode - 发送验证码：phone 手机号（必须），code 验证码（可选，不传则随机生成）
+	// VerifyCode
+	/**
+	 * @name 发送验证码
+	 * @param phone 手机号（必须）
+	 * @param code 验证码（可选，不传则随机生成）
+	 * @return *SMSResponse
+	 */
 	VerifyCode(phone any, code ...any) (response *SMSResponse)
 }
 
@@ -216,6 +257,11 @@ type GoMailRequest struct {
 func (this *GoMailRequest) VerifyCode(phone any, code ...any) (response *SMSResponse) {
 
 	response = &SMSResponse{}
+
+	if utils.Is.Email(phone) {
+		response.Error = errors.New("格式错误，请给一个正确的邮箱地址")
+		return
+	}
 
 	if len(code) == 0 {
 		code = append(code, utils.Rand.String(6, "0123456789"))
@@ -264,6 +310,11 @@ type AliYunSMS struct {
 func (this *AliYunSMS) VerifyCode(phone any, code ...any) (response *SMSResponse) {
 
 	response = &SMSResponse{}
+
+	if !utils.Is.Phone(phone) {
+		response.Error = errors.New("格式错误，请给一个正确的手机号码")
+		return
+	}
 
 	params := map[string]any{
 		// 必填，接收短信的手机号码
@@ -340,6 +391,11 @@ type TencentSMS struct {
 func (this *TencentSMS) VerifyCode(phone any, code ...any) (response *SMSResponse) {
 
 	response = &SMSResponse{}
+
+	if !utils.Is.Phone(phone) {
+		response.Error = errors.New("格式错误，请给一个正确的手机号码")
+		return
+	}
 
 	// 实例化一个请求对象,每个接口都会对应一个request对象
 	request := TencentCloud.NewSendSmsRequest()

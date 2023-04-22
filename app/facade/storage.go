@@ -34,6 +34,41 @@ func init() {
 	})
 }
 
+const (
+	// StorageModeLocal - 本地存储
+	StorageModeLocal = "local"
+	// StorageModeOSS - OSS存储
+	StorageModeOSS = "oss"
+	// StorageModeCOS - COS存储
+	StorageModeCOS = "cos"
+	// StorageModeKODO - KODO存储
+	StorageModeKODO = "kodo"
+)
+
+// NewStorage - 创建Storage实例
+/**
+ * @param mode 驱动模式
+ * @return StorageInterface
+ * 使用方式：
+ * 1. storage := facade.NewStorage("oss")
+ * 2. storage := facade.NewStorage(facade.StorageModeOSS)
+ */
+func NewStorage(mode any) StorageInterface {
+	switch strings.ToLower(cast.ToString(mode)) {
+	case "local":
+		Storage = LocalStorage
+	case "oss":
+		Storage = OSS
+	case "cos":
+		Storage = COS
+	case "kodo":
+		Storage = KODO
+	default:
+		Storage = LocalStorage
+	}
+	return Storage
+}
+
 // StorageToml - 存储配置文件
 var StorageToml *utils.ViperResponse
 
@@ -193,6 +228,12 @@ func initStorage() {
 	}
 }
 
+// Storage - Storage实例
+/**
+ * @return StorageInterface
+ * @example：
+ * storage := facade.Storage.Upload(facade.Storage.Path() + suffix, bytes)
+ */
 var Storage StorageInterface
 var LocalStorage *LocalStorageStruct
 var OSS *OSSStruct

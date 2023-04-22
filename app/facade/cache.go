@@ -9,6 +9,7 @@ import (
 	"github.com/unti-io/go-utils/utils"
 	"reflect"
 	debugs "runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,33 @@ func init() {
 	CacheToml.Viper.OnConfigChange(func(event fsnotify.Event) {
 		initCache()
 	})
+}
+
+const (
+	// CacheModeLocal - 本地缓存
+	CacheModeLocal = "local"
+	// CacheModeRedis - Redis缓存
+	CacheModeRedis = "redis"
+)
+
+// NewCache - 创建Cache实例
+/**
+ * @param mode 驱动模式
+ * @return CacheInterface
+ * 使用方式：
+ * 1. cache := facade.NewCache("redis")
+ * 2. cache := facade.NewCache(facade.CacheModeRedis)
+ */
+func NewCache(mode any) CacheInterface {
+	switch strings.ToLower(cast.ToString(mode)) {
+	case "local":
+		Cache = BigCache
+	case "redis":
+		Cache = Redis
+	default:
+		Cache = BigCache
+	}
+	return Cache
 }
 
 // CacheToml - 缓存配置文件
@@ -127,14 +155,46 @@ func initCache() {
 	}
 }
 
+// Cache - Cache实例
+/**
+ * @return CacheInterface
+ * @example：
+ * cache := facade.Cache.Set("test", "这是测试", 5 * time.Minute)
+ */
 var Cache CacheInterface
 var Redis *RedisCacheStruct
 var BigCache *LocalCacheStruct
 
 type CacheInterface interface {
+	// Has
+	/**
+	 * @name 判断缓存是否存在
+	 * @param key 缓存的key
+	 * @return bool
+	 */
 	Has(key any) (ok bool)
+	// Get
+	/**
+	 * @name 获取缓存
+	 * @param key 缓存的key
+	 * @return any 缓存值
+	 */
 	Get(key any) (value any)
+	// Set
+	/**
+	 * @name 设置缓存
+	 * @param key 缓存的key
+	 * @param value 缓存的值
+	 * @param expire （可选）过期时间
+	 * @return bool
+	 */
 	Set(key any, value any, expire ...any) (ok bool)
+	// Del
+	/**
+	 * @name 删除缓存
+	 * @param key 缓存的key
+	 * @return bool
+	 */
 	Del(key any) (ok bool)
 }
 
@@ -144,7 +204,7 @@ type RedisCacheStruct struct {
 	Expire    time.Duration
 }
 
-func (this *RedisCacheStruct) Has(key any) (check bool) {
+func (this *RedisCacheStruct) Has(key any) (ok bool) {
 
 	ctx := context.Background()
 
@@ -190,7 +250,7 @@ type LocalCacheStruct struct {
 	Expire    time.Duration
 }
 
-func (this *LocalCacheStruct) Has(key any) (check bool) {
+func (this *LocalCacheStruct) Has(key any) (ok bool) {
 
 	_, err := this.Client.Get(cast.ToString(key))
 	return utils.Ternary[bool](err != nil, false, true)

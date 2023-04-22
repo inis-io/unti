@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -62,6 +63,42 @@ func init() {
 	CacheToml.Viper.OnConfigChange(func(event fsnotify.Event) {
 		initLog()
 	})
+}
+
+const (
+	// LogModeInfo - 信息日志
+	LogModeInfo = "info"
+	// LogModeWarn - 警告日志
+	LogModeWarn = "warn"
+	// LogModeError - 错误日志
+	LogModeError = "error"
+	// LogModeDebug - 调试日志
+	LogModeDebug = "debug"
+)
+
+// NewLog - 创建Log实例
+/**
+ * @param mode 驱动模式
+ * @return *zap.Logger
+ * 使用方式：
+ * 1. log := facade.NewLog("info")
+ * 2. log := facade.NewLog(facade.LogModeInfo)
+ */
+func NewLog(mode any) *zap.Logger {
+	var item *zap.Logger
+	switch strings.ToLower(cast.ToString(mode)) {
+	case "info":
+		item = LogInfo
+	case "warn":
+		item = LogWarn
+	case "error":
+		item = LogError
+	case "debug":
+		item = LogDebug
+	default:
+		item = LogInfo
+	}
+	return item
 }
 
 // logLevel - 创建日志通道

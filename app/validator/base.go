@@ -10,6 +10,15 @@ type Valid interface {
 	Struct() any
 }
 
+// NewValid
+/**
+ * @name 验证器
+ * @param table 表名
+ * @param params 参数
+ * @return err 错误
+ * @example:
+ * err := validator.NewValid("users", params)
+ */
 func NewValid(table string, params map[string]any) (err error) {
 
 	var item Valid

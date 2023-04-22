@@ -5,8 +5,38 @@ import (
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
 	"gorm.io/gorm"
+	"strings"
 )
 
+const (
+	// DBModeMySql - MySQL数据库
+	DBModeMySql = "mysql"
+)
+
+// NewDB - 创建DB实例
+/**
+ * @param mode 驱动模式
+ * @return DBInterface
+ * @example：
+ * 1. db := facade.NewDB("mysql")
+ * 2. db := facade.NewDB(facade.DBModeMySql)
+ */
+func NewDB(mode any) DBInterface {
+	switch strings.ToLower(cast.ToString(mode)) {
+	case "mysql":
+		DB = MySQL
+	default:
+		DB = MySQL
+	}
+	return DB
+}
+
+// DB - DB实例
+/**
+ * @return DBInterface
+ * @example：
+ * db := facade.DB.Model(&model.Users{}).Find()
+ */
 var DB DBInterface
 
 type DBInterface interface {
