@@ -21,8 +21,8 @@ require (
 	github.com/qiniu/go-sdk/v7 v7.14.0
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/spf13/cast v1.5.0
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.643
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.643
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.644
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.644
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
 	github.com/unrolled/secure v1.13.0
 	github.com/unti-io/go-utils v1.1.0

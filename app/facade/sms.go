@@ -258,7 +258,7 @@ func (this *GoMailRequest) VerifyCode(phone any, code ...any) (response *SMSResp
 
 	response = &SMSResponse{}
 
-	if utils.Is.Email(phone) {
+	if !utils.Is.Email(phone) {
 		response.Error = errors.New("格式错误，请给一个正确的邮箱地址")
 		return
 	}
