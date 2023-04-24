@@ -16,7 +16,7 @@ const (
 	TomlApp     = "app"
 )
 
-// NweToml - 获取配置文件
+// NewToml - 获取配置文件
 /**
  * @param mode 驱动模式
  * @return *utils.ViperResponse
@@ -24,7 +24,7 @@ const (
  * 1. storage := facade.NweToml("cache")
  * 2. storage := facade.NweToml(facade.TomlStorage)
  */
-func NweToml(mode any) *utils.ViperResponse {
+func NewToml(mode any) *utils.ViperResponse {
 	switch strings.ToLower(cast.ToString(mode)) {
 	case TomlCache:
 		return CacheToml

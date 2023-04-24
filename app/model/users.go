@@ -29,8 +29,8 @@ type Users struct {
 }
 
 func init() {
-	if migrate {
-		err := facade.MySQL.Conn.AutoMigrate(&Users{})
+	if cast.ToBool(facade.NewToml("db").Get("mysql.auto_migrate")) {
+		err := facade.NewDB("mysql").Drive().AutoMigrate(&Users{})
 		if err != nil {
 			facade.Log.Error(map[string]any{"error": err}, "Users表迁移失败")
 			return

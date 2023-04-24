@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/spf13/cast"
 	"gorm.io/plugin/soft_delete"
 	"inis/app/facade"
 )
@@ -19,8 +20,8 @@ type AuthRules struct {
 }
 
 func init() {
-	if migrate {
-		err := facade.MySQL.Conn.AutoMigrate(&AuthRules{})
+	if cast.ToBool(facade.NewToml("db").Get("mysql.auto_migrate")) {
+		err := facade.NewDB("mysql").Drive().AutoMigrate(&AuthRules{})
 		if err != nil {
 			facade.Log.Error(map[string]any{"error": err}, "AuthRules表迁移失败")
 			return

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"github.com/spf13/cast"
 	"gorm.io/plugin/soft_delete"
 	"inis/app/facade"
 )
@@ -17,8 +18,8 @@ type AuthGroup struct {
 }
 
 func init() {
-	if migrate {
-		err := facade.MySQL.Conn.AutoMigrate(&AuthGroup{})
+	if cast.ToBool(facade.NewToml("db").Get("mysql.auto_migrate")) {
+		err := facade.NewDB("mysql").Drive().AutoMigrate(&AuthGroup{})
 		if err != nil {
 			facade.Log.Error(map[string]any{"error": err}, "AuthGroup表迁移失败")
 			return
