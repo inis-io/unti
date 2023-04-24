@@ -49,19 +49,19 @@ const (
 /**
  * @param mode 驱动模式
  * @return StorageInterface
- * 使用方式：
+ * @example：
  * 1. storage := facade.NewStorage("oss")
  * 2. storage := facade.NewStorage(facade.StorageModeOSS)
  */
 func NewStorage(mode any) StorageInterface {
 	switch strings.ToLower(cast.ToString(mode)) {
-	case "local":
+	case StorageModeLocal:
 		Storage = LocalStorage
-	case "oss":
+	case StorageModeOSS:
 		Storage = OSS
-	case "cos":
+	case StorageModeCOS:
 		Storage = COS
-	case "kodo":
+	case StorageModeKODO:
 		Storage = KODO
 	default:
 		Storage = LocalStorage

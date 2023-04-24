@@ -50,11 +50,11 @@ const (
  */
 func NewSMS(mode any) SMSInterface {
 	switch strings.ToLower(cast.ToString(mode)) {
-	case "email":
+	case SMSModeEmail:
 		SMS = GoMail
-	case "aliyun":
+	case SMSModeAliYun:
 		SMS = SMSAliYun
-	case "tencent":
+	case SMSModeTencent:
 		SMS = SMSTencent
 	}
 	return SMS

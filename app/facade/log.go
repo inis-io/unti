@@ -117,13 +117,13 @@ func NewLog(mode any) *LogRequest {
 		Msg: "log",
 	}
 	switch strings.ToLower(cast.ToString(mode)) {
-	case "info":
+	case LogModeInfo:
 		item.Level = LogModeInfo
-	case "warn":
+	case LogModeWarn:
 		item.Level = LogModeWarn
-	case "error":
+	case LogModeError:
 		item.Level = LogModeError
-	case "debug":
+	case LogModeDebug:
 		item.Level = LogModeDebug
 	default:
 		item.Level = LogModeInfo

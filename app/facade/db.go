@@ -23,7 +23,7 @@ const (
  */
 func NewDB(mode any) DBInterface {
 	switch strings.ToLower(cast.ToString(mode)) {
-	case "mysql":
+	case DBModeMySql:
 		DB = MySQL
 	default:
 		DB = MySQL

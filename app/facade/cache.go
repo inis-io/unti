@@ -39,15 +39,15 @@ const (
 /**
  * @param mode 驱动模式
  * @return CacheInterface
- * 使用方式：
+ * @example：
  * 1. cache := facade.NewCache("redis")
  * 2. cache := facade.NewCache(facade.CacheModeRedis)
  */
 func NewCache(mode any) CacheInterface {
 	switch strings.ToLower(cast.ToString(mode)) {
-	case "local":
+	case CacheModeLocal:
 		Cache = BigCache
-	case "redis":
+	case CacheModeRedis:
 		Cache = Redis
 	default:
 		Cache = BigCache
