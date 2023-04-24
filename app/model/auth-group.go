@@ -20,7 +20,7 @@ func init() {
 	if migrate {
 		err := facade.MySQL.Conn.AutoMigrate(&AuthGroup{})
 		if err != nil {
-			facade.Log.Error("AuthGroup表迁移失败", map[string]any{"error": err})
+			facade.Log.Error(map[string]any{"error": err}, "AuthGroup表迁移失败")
 			return
 		}
 	}

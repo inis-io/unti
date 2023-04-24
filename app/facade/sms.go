@@ -125,12 +125,12 @@ region            = "ap-guangzhou"
 	}).Read()
 
 	if item.Error != nil {
-		Log.Error("SMS配置初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "SMS配置初始化错误")
 		return
 	}
 
@@ -158,12 +158,12 @@ func initSMS() {
 	})
 
 	if err != nil {
-		Log.Error("阿里云短信服务初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "阿里云短信服务初始化错误")
 	}
 
 	SMSAliYun = &AliYunSMS{
@@ -183,12 +183,12 @@ func initSMS() {
 	)
 
 	if err != nil {
-		Log.Error("腾讯云短信服务初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "腾讯云短信服务初始化错误")
 	}
 
 	SMSTencent = &TencentSMS{

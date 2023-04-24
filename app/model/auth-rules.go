@@ -22,7 +22,7 @@ func init() {
 	if migrate {
 		err := facade.MySQL.Conn.AutoMigrate(&AuthRules{})
 		if err != nil {
-			facade.Log.Error("AuthRules表迁移失败", map[string]any{"error": err})
+			facade.Log.Error(map[string]any{"error": err}, "AuthRules表迁移失败")
 			return
 		}
 	}

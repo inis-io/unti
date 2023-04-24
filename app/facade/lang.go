@@ -11,8 +11,8 @@ func Lang(ctx *gin.Context, key string, args ...any) (result string) {
 
 	var lang string
 	// 获取语言
-	lang, _ = ctx.Cookie("inis_lang")
-	lang = ctx.DefaultQuery("inis_lang", lang)
+	lang, _ = ctx.Cookie("unti_lang")
+	lang = ctx.DefaultQuery("unti_lang", lang)
 	lang = strings.ToLower(lang)
 
 	model := utils.LangModel{

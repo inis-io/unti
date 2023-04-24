@@ -22,7 +22,7 @@ func GinLogger() gin.HandlerFunc {
 		ctx.Next()
 
 		if cast.ToBool(facade.LogToml.Get("on", true)) {
-			facade.Log.Info("middleware", map[string]any{
+			facade.Log.Info(map[string]any{
 				"path"   : ctx.Request.URL.Path,
 				"method" : ctx.Request.Method,
 				// "headers": ctx.Request.Header,
@@ -32,7 +32,7 @@ func GinLogger() gin.HandlerFunc {
 				"user-agent": ctx.Request.UserAgent(),
 				"errors" : ctx.Errors.ByType(gin.ErrorTypePrivate).String(),
 				"cost"   : time.Since(start).String(),
-			})
+			}, "middleware")
 		}
 	}
 }
@@ -63,22 +63,22 @@ func GinRecovery(debug ...bool) gin.HandlerFunc {
 
 				request, _ := httputil.DumpRequest(ctx.Request, false)
 				if broken {
-					facade.Log.Error("error", map[string]any{
+					facade.Log.Error(map[string]any{
 						"path":  ctx.Request.URL.Path,
 						"request": string(request),
-					})
+					}, "middleware")
 					// If the connection is dead, we can't write a status to it.
 					ctx.Error(err.(error)) // nolint: errcheck
 					ctx.Abort()
 					return
 				}
 
-				facade.Log.Error("[Recovery from panic]", map[string]any{
+				facade.Log.Error(map[string]any{
 					"path":  ctx.Request.URL.Path,
 					"error": err,
 					"stack": string(debugs.Stack()),
 					"request": string(request),
-				})
+				}, "[Recovery from panic]")
 
 				ctx.AbortWithStatus(http.StatusInternalServerError)
 			}

@@ -181,12 +181,12 @@ auto_migrate = true
 	}).Read()
 
 	if item.Error != nil {
-		Log.Error("数据库配置初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "数据库配置初始化错误")
 		return
 	}
 

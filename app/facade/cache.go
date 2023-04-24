@@ -94,12 +94,12 @@ database   = 0
 	}).Read()
 
 	if item.Error != nil {
-		Log.Error("缓存配置初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "缓存配置初始化错误")
 		return
 	}
 
@@ -130,13 +130,13 @@ func initCache() {
 	localExpire := time.Duration(cast.ToInt(CacheToml.Get("local.expire", 7200))) * time.Second
 	localClient, err := bigcache.New(context.Background(), bigcache.DefaultConfig(localExpire))
 	if err != nil {
-		Log.Error("本地缓存初始化失败", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"stack": string(debugs.Stack()),
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "本地缓存初始化失败")
 	}
 
 	// 本地缓存

@@ -43,12 +43,12 @@ time_zone = "Asia/Shanghai"
 	}).Read()
 
 	if item.Error != nil {
-		Log.Error("支付配置初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "支付配置初始化错误")
 		return
 	}
 
@@ -75,12 +75,12 @@ func Alipay() *alipay.Client {
 	//    isProd：是否是正式环境
 	client, err := alipay.NewClient(cast.ToString(PayToml.Get("alipay.app_id")), privateKey.Text, true)
 	if err != nil {
-		Log.Error("支付宝支付初始化失败", map[string]any{
+		Log.Error(map[string]any{
 			"err": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "支付宝支付初始化失败")
 		return nil
 	}
 

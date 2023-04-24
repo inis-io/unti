@@ -2,7 +2,9 @@ package validator
 
 import (
 	"errors"
+	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
+	"strings"
 )
 
 type Valid interface {
@@ -19,11 +21,11 @@ type Valid interface {
  * @example:
  * err := validator.NewValid("users", params)
  */
-func NewValid(table string, params map[string]any) (err error) {
+func NewValid(table any, params map[string]any) (err error) {
 
 	var item Valid
 
-	switch table {
+	switch strings.ToLower(cast.ToString(table)) {
 	case "users":
 		item = &Users{}
 	case "auth-group":

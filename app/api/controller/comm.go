@@ -238,16 +238,6 @@ func (this *Comm) register(ctx *gin.Context) {
 		facade.Cache.Set(cacheName, sms.VerifyCode, 5 * time.Minute)
 		this.json(ctx, nil, "验证码发送成功！", 201)
 		return
-
-		// // 生成一个长度为6的随机字符串
-		// code := utils.Rand.String(6, "0123456789")
-		// // 缓存验证码 - 5分钟
-		// facade.Cache.Set(cacheName, code, 5 * time.Minute)
-		// // 发送邮件
-		// facade.Email.Send([]string{email}, "注册验证码", "您的验证码是："+code+"，有效期5分钟。（打死也不要把验证码告诉别人）")
-		// // 发送验证码
-		// this.json(ctx, nil, "验证码发送成功！", 201)
-		// return
 	}
 
 	if utils.Is.Empty(params["password"]) {
@@ -355,16 +345,6 @@ func (this *Comm) emailLogin(ctx *gin.Context) {
 		facade.Cache.Set(cacheName, sms.VerifyCode, 5 * time.Minute)
 		this.json(ctx, nil, "验证码发送成功！", 201)
 		return
-
-		// // 生成一个长度为6的随机字符串
-		// code := utils.Rand.String(6, "0123456789")
-		// // 缓存验证码 - 5分钟
-		// facade.Cache.Set(cacheName, code, 5*time.Minute)
-		// // 发送邮件
-		// facade.Email.Send([]string{email}, "登录验证码", "您的验证码是："+code+"，有效期5分钟。（打死也不要把验证码告诉别人）")
-		// // 发送验证码
-		// this.json(ctx, nil, "验证码发送成功！", 201)
-		// return
 	}
 
 	// 获取缓存里面的验证码

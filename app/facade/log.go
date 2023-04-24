@@ -76,6 +76,34 @@ const (
 	LogModeDebug = "debug"
 )
 
+type LogRequest struct {
+	Level string
+	Msg   string
+}
+
+// Write - 写入日志
+func (this *LogRequest) Write(data map[string]any, msg ...any) {
+
+	if len(msg) == 0 {
+		msg = append(msg, this.Level)
+	}
+
+	this.Msg = cast.ToString(msg[0])
+
+	switch this.Level {
+	case LogModeInfo:
+		Log.Info(data, this.Msg)
+	case LogModeWarn:
+		Log.Warn(data, this.Msg)
+	case LogModeError:
+		Log.Error(data, this.Msg)
+	case LogModeDebug:
+		Log.Debug(data, this.Msg)
+	default:
+		Log.Info(data, this.Msg)
+	}
+}
+
 // NewLog - 创建Log实例
 /**
  * @param mode 驱动模式
@@ -84,19 +112,21 @@ const (
  * 1. log := facade.NewLog("info")
  * 2. log := facade.NewLog(facade.LogModeInfo)
  */
-func NewLog(mode any) *zap.Logger {
-	var item *zap.Logger
+func NewLog(mode any) *LogRequest {
+	item := &LogRequest{
+		Msg: "log",
+	}
 	switch strings.ToLower(cast.ToString(mode)) {
 	case "info":
-		item = LogInfo
+		item.Level = LogModeInfo
 	case "warn":
-		item = LogWarn
+		item.Level = LogModeWarn
 	case "error":
-		item = LogError
+		item.Level = LogModeError
 	case "debug":
-		item = LogDebug
+		item.Level = LogModeDebug
 	default:
-		item = LogInfo
+		item.Level = LogModeInfo
 	}
 	return item
 }
@@ -161,17 +191,20 @@ var LogDebug *zap.Logger
 
 // log - 日志结构体
 type log struct{
-	Info  func(msg string, data map[string]any)
-	Warn  func(msg string, data map[string]any)
-	Error func(msg string, data map[string]any)
-	Debug func(msg string, data map[string]any)
+	Info  func(data map[string]any, msg ...any)
+	Warn  func(data map[string]any, msg ...any)
+	Error func(data map[string]any, msg ...any)
+	Debug func(data map[string]any, msg ...any)
 }
 
 // Log - 日志
 var Log *log
 
-func Info(msg string, data map[string]any) {
+func Info(data map[string]any, msg ...any) {
 
+	if len(msg) == 0 {
+		msg = append(msg, "info")
+	}
 
 	if len(data) > 0 {
 
@@ -190,10 +223,14 @@ func Info(msg string, data map[string]any) {
 			slice = append(slice, zap.Any(keys[key], data[keys[key]]))
 		}
 
-		LogInfo.Info(msg, slice...)
+		LogInfo.Info(cast.ToString(msg[0]), slice...)
 	}
 }
-func Warn(msg string, data map[string]any) {
+func Warn(data map[string]any, msg ...any) {
+
+	if len(msg) == 0 {
+		msg = append(msg, "warn")
+	}
 
 	if len(data) > 0 {
 
@@ -212,10 +249,14 @@ func Warn(msg string, data map[string]any) {
 			slice = append(slice, zap.Any(keys[key], data[keys[key]]))
 		}
 
-		LogWarn.Warn(msg, slice...)
+		LogWarn.Warn(cast.ToString(msg[0]), slice...)
 	}
 }
-func Error(msg string, data map[string]any) {
+func Error(data map[string]any, msg ...any) {
+
+	if len(msg) == 0 {
+		msg = append(msg, "error")
+	}
 
 	if len(data) > 0 {
 
@@ -234,10 +275,14 @@ func Error(msg string, data map[string]any) {
 			slice = append(slice, zap.Any(keys[key], data[keys[key]]))
 		}
 
-		LogError.Error(msg, slice...)
+		LogError.Error(cast.ToString(msg[0]), slice...)
 	}
 }
-func Debug(msg string, data map[string]any) {
+func Debug(data map[string]any, msg ...any) {
+
+	if len(msg) == 0 {
+		msg = append(msg, "debug")
+	}
 
 	if len(data) > 0 {
 
@@ -256,6 +301,6 @@ func Debug(msg string, data map[string]any) {
 			slice = append(slice, zap.Any(keys[key], data[keys[key]]))
 		}
 
-		LogDebug.Debug(msg, slice...)
+		LogDebug.Debug(cast.ToString(msg[0]), slice...)
 	}
 }

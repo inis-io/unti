@@ -134,12 +134,12 @@ domain            = ""
 	}).Read()
 
 	if item.Error != nil {
-		Log.Error("存储配置初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "存储配置初始化错误")
 		return
 	}
 
@@ -156,12 +156,12 @@ func initStorage() {
 	ossClient, err := oss.New(endpoint, accessKeyId, accessKeySecret)
 
 	if err != nil {
-		Log.Error("OSS 初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "OSS 初始化错误")
 	}
 
 	appId 	  := cast.ToString(StorageToml.Get("cos.app_id"))
@@ -172,12 +172,12 @@ func initStorage() {
 
 	cosUrl, err := url.Parse(fmt.Sprintf("https://%s-%s.cos.%s.myqcloud.com", bucket, appId, region))
 	if err != nil {
-		Log.Error("COS URL 解析错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "COS URL 解析错误")
 	}
 
 	cosClient := cos.NewClient(&cos.BaseURL{
@@ -297,12 +297,12 @@ func (this *OSSStruct) Bucket() *oss.Bucket {
 	exist, err := this.Client.IsBucketExist(cast.ToString(StorageToml.Get("oss.bucket")))
 
 	if err != nil {
-		Log.Error("OSS Bucket 初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "OSS Bucket 初始化错误")
 	}
 
 	wg := sync.WaitGroup{}
@@ -314,12 +314,12 @@ func (this *OSSStruct) Bucket() *oss.Bucket {
 			// 创建存储空间。
 			err = this.Client.CreateBucket(cast.ToString(StorageToml.Get("oss.bucket")))
 			if err != nil {
-				Log.Error("OSS Bucket 创建错误", map[string]any{
+				Log.Error(map[string]any{
 					"error": err,
 					"func_name": utils.Caller().FuncName,
 					"file_name": utils.Caller().FileName,
 					"file_line": utils.Caller().Line,
-				})
+				}, "OSS Bucket 创建错误")
 			}
 		}(&wg)
 	}
@@ -328,12 +328,12 @@ func (this *OSSStruct) Bucket() *oss.Bucket {
 
 	bucket, err := this.Client.Bucket(cast.ToString(StorageToml.Get("oss.bucket")))
 	if err != nil {
-		Log.Error("OSS Bucket 获取错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "OSS Bucket 获取错误")
 		return nil
 	}
 
@@ -385,12 +385,12 @@ func (this *COSStruct) Object() *cos.ObjectService {
 	exist, err := this.Client.Bucket.IsExist(context.Background())
 
 	if err != nil {
-		Log.Error("COS Bucket 查询失败", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "COS Bucket 查询失败")
 	}
 
 	wg := sync.WaitGroup{}
@@ -404,12 +404,12 @@ func (this *COSStruct) Object() *cos.ObjectService {
 				XCosACL: "public-read",
 			})
 			if err != nil {
-				Log.Error("COS Bucket 创建失败", map[string]any{
+				Log.Error(map[string]any{
 					"error": err,
 					"func_name": utils.Caller().FuncName,
 					"file_name": utils.Caller().FileName,
 					"file_line": utils.Caller().Line,
-				})
+				}, "COS Bucket 创建失败")
 			}
 		}(&wg)
 	}
@@ -511,12 +511,12 @@ func (this *KODOStruct) Bucket() *qbox.Mac {
 	if !this.IsExist() {
 		err := this.CreateBucket()
 		if err != nil {
-			Log.Error("KODO 存储空间创建失败", map[string]any{
+			Log.Error(map[string]any{
 				"error": err,
 				"func_name": utils.Caller().FuncName,
 				"file_name": utils.Caller().FileName,
 				"file_line": utils.Caller().Line,
-			})
+			}, "KODO 存储空间创建失败")
 			return nil
 		}
 	}

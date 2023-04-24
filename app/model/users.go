@@ -32,7 +32,7 @@ func init() {
 	if migrate {
 		err := facade.MySQL.Conn.AutoMigrate(&Users{})
 		if err != nil {
-			facade.Log.Error("Users表迁移失败", map[string]any{"error": err})
+			facade.Log.Error(map[string]any{"error": err}, "Users表迁移失败")
 			return
 		}
 	}

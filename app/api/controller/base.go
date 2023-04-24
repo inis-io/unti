@@ -29,7 +29,7 @@ type ApiInterface interface {
 	// IPATCH(ctx *gin.Context)
 }
 
-func (this base) json(ctx *gin.Context, data any, msg any, code any) {
+func (this base) json(ctx *gin.Context, data, msg, code any) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"code": cast.ToInt(code),
 		"msg":  cast.ToString(msg),

@@ -53,12 +53,12 @@ global   = 50
 	}).Read()
 
 	if item.Error != nil {
-		Log.Error("APP配置初始化错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "APP配置初始化错误")
 		return
 	}
 
@@ -124,12 +124,12 @@ func JwtParse(token string) (result JwtStruct) {
 	})
 
 	if err != nil {
-		Log.Error("JWT解析错误", map[string]any{
+		Log.Error(map[string]any{
 			"error": err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		})
+		}, "JWT解析错误")
 		result.Error = err
 		return
 	}
