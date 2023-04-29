@@ -163,7 +163,7 @@ func (this base) params(ctx *gin.Context, def ...map[string]any) (result map[str
 			if err != nil {
 				break
 			}
-			item = utils.Parse.ParamsBefore(values)
+			item = utils.Parse.Params(utils.Parse.ParamsBefore(values))
 			// 合并 params 参数
 			if !utils.Is.Empty(item) {
 				for key, val := range item {
@@ -199,7 +199,7 @@ func (this base) params(ctx *gin.Context, def ...map[string]any) (result map[str
 				}
 			}
 
-			item = utils.Parse.ParamsBefore(values)
+			item = utils.Parse.Params(utils.Parse.ParamsBefore(values))
 
 			// 合并 params 参数
 			if !utils.Is.Empty(item) {
@@ -215,7 +215,7 @@ func (this base) params(ctx *gin.Context, def ...map[string]any) (result map[str
 
 	// query 数据不为空
 	if !utils.Is.Empty(content["query"]) {
-		item := utils.Parse.ParamsBefore(ctx.Request.URL.Query())
+		item := utils.Parse.Params(utils.Parse.ParamsBefore(ctx.Request.URL.Query()))
 		// 合并 params 参数
 		for key, val := range item {
 			params[key] = val
