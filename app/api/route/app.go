@@ -10,8 +10,12 @@ import (
 
 func Route(engine *gin.Engine) {
 
-	// 全局中间件 global.QpsGlobal(),
-	api := engine.Group("/api/").Use(global.Cors(), global.QpsPoint(), global.QpsGlobal())
+	// 全局中间件
+	api := engine.Group("/api/").Use(
+		global.QpsPoint(),		// QPS限制 - 单接口限流
+		global.QpsGlobal(),		// QPS限制 - 全局限流
+		global.Params(),		// 解析参数
+	)
 
 	// 公共接口 - 无权限
 	allow := map[string]controller.ApiInterface{

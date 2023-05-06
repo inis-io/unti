@@ -21,17 +21,20 @@ func GinLogger() gin.HandlerFunc {
 
 		ctx.Next()
 
+		params, _ := ctx.Get("params")
+
 		if cast.ToBool(facade.LogToml.Get("on", true)) {
 			facade.Log.Info(map[string]any{
-				"path"   : ctx.Request.URL.Path,
-				"method" : ctx.Request.Method,
+				"path":   ctx.Request.URL.Path,
+				"method": ctx.Request.Method,
 				// "headers": ctx.Request.Header,
-				"query"  : ctx.Request.URL.RawQuery,
-				"params" : ctx.Request.Form,
-				"ip"     : ctx.ClientIP(),
+				// "query":      ctx.Request.URL.RawQuery,
+				// "params":     ctx.Request.Form,
+				"params":     params,
+				"ip":         ctx.ClientIP(),
 				"user-agent": ctx.Request.UserAgent(),
-				"errors" : ctx.Errors.ByType(gin.ErrorTypePrivate).String(),
-				"cost"   : time.Since(start).String(),
+				"errors":     ctx.Errors.ByType(gin.ErrorTypePrivate).String(),
+				"cost":       time.Since(start).String(),
 			}, "middleware")
 		}
 	}
@@ -64,7 +67,7 @@ func GinRecovery(debug ...bool) gin.HandlerFunc {
 				request, _ := httputil.DumpRequest(ctx.Request, false)
 				if broken {
 					facade.Log.Error(map[string]any{
-						"path":  ctx.Request.URL.Path,
+						"path":    ctx.Request.URL.Path,
 						"request": string(request),
 					}, "middleware")
 					// If the connection is dead, we can't write a status to it.
@@ -74,9 +77,9 @@ func GinRecovery(debug ...bool) gin.HandlerFunc {
 				}
 
 				facade.Log.Error(map[string]any{
-					"path":  ctx.Request.URL.Path,
-					"error": err,
-					"stack": string(debugs.Stack()),
+					"path":    ctx.Request.URL.Path,
+					"error":   err,
+					"stack":   string(debugs.Stack()),
 					"request": string(request),
 				}, "[Recovery from panic]")
 

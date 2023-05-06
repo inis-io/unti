@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	api "inis/app/api/route"
+	"inis/app/middleware"
 	socket "inis/app/socket/route"
 	app "inis/config"
 )
@@ -20,6 +21,8 @@ func main() {
 }
 
 func run() {
+	// 允许跨域
+	app.Engine.Use(middleware.Cors())
 	// 注册路由
 	app.Use(api.Route, socket.Route)
 	// 运行服务

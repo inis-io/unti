@@ -21,15 +21,15 @@ type MySqlStruct struct {
 }
 
 // 初始化数据库
-func initMySql()  {
+func initMySql() {
 
 	hostname := cast.ToString(DBToml.Get("mysql.hostname", "localhost"))
 	hostport := cast.ToString(DBToml.Get("mysql.hostport", "3306"))
 	username := cast.ToString(DBToml.Get("mysql.username", ""))
 	database := cast.ToString(DBToml.Get("mysql.database", ""))
 	password := cast.ToString(DBToml.Get("mysql.password", ""))
-	charset  := cast.ToString(DBToml.Get("mysql.charset", "utf8mb4"))
-	prefix   := cast.ToString(DBToml.Get("mysql.prefix", "unti_"))
+	charset := cast.ToString(DBToml.Get("mysql.charset", "utf8mb4"))
+	prefix := cast.ToString(DBToml.Get("mysql.prefix", "unti_"))
 
 	conn, _ := gorm.Open(mysql.New(mysql.Config{
 		DSN: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=Local", username, password, hostname, hostport, database, charset),
@@ -73,7 +73,7 @@ func (this *MySqlStruct) Drive() *gorm.DB {
 
 func (this *MySqlStruct) Model(model any) *ModelStruct {
 	return &ModelStruct{
-		dest :             model,
+		dest:              model,
 		model:             this.Conn.Model(model),
 		softDelete:        "delete_time",
 		defaultSoftDelete: 0,
@@ -82,6 +82,11 @@ func (this *MySqlStruct) Model(model any) *ModelStruct {
 
 func (this *ModelStruct) Dest(dest any) *ModelStruct {
 	this.dest = dest
+	return this
+}
+
+func (this *ModelStruct) Scan(dest any) *ModelStruct {
+	this.model.Scan(dest)
 	return this
 }
 
@@ -410,10 +415,6 @@ func (this *ModelStruct) ILike(where any) *ModelStruct {
 		this.Like(slice)
 
 	} else if utils.IsMapAny(where) {
-
-		// for _, val := range cast.ToStringMap(where) {
-		// 	this.WhereLike(val)
-		// }
 
 		var sql string
 		for _, val := range cast.ToStringMap(where) {
@@ -763,7 +764,15 @@ func (this *ModelStruct) Update(data any) (tx *gorm.DB) {
 
 // Save - 保存
 func (this *ModelStruct) Save(data any) (tx *gorm.DB) {
-	return nil
+
+	// 查询是否存在 - 存在则更新，不存在则创建
+	tx = this.model.First(&this.dest)
+	if tx.Error != nil {
+		return NewDB(DBModeMySql).Model(this.dest).Create(data)
+	}
+
+	// 更新
+	return this.model.Updates(data)
 }
 
 // Force - 真实删除
