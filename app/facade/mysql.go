@@ -21,15 +21,15 @@ type MySqlStruct struct {
 }
 
 // 初始化数据库
-func initMySql()  {
+func initMySql() {
 
 	hostname := cast.ToString(DBToml.Get("mysql.hostname", "localhost"))
 	hostport := cast.ToString(DBToml.Get("mysql.hostport", "3306"))
 	username := cast.ToString(DBToml.Get("mysql.username", ""))
 	database := cast.ToString(DBToml.Get("mysql.database", ""))
 	password := cast.ToString(DBToml.Get("mysql.password", ""))
-	charset  := cast.ToString(DBToml.Get("mysql.charset", "utf8mb4"))
-	prefix   := cast.ToString(DBToml.Get("mysql.prefix", "unti_"))
+	charset := cast.ToString(DBToml.Get("mysql.charset", "utf8mb4"))
+	prefix := cast.ToString(DBToml.Get("mysql.prefix", "unti_"))
 
 	conn, _ := gorm.Open(mysql.New(mysql.Config{
 		DSN: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=Local", username, password, hostname, hostport, database, charset),
@@ -73,7 +73,7 @@ func (this *MySqlStruct) Drive() *gorm.DB {
 
 func (this *MySqlStruct) Model(model any) *ModelStruct {
 	return &ModelStruct{
-		dest :             model,
+		dest:              model,
 		model:             this.Conn.Model(model),
 		softDelete:        "delete_time",
 		defaultSoftDelete: 0,
@@ -82,6 +82,11 @@ func (this *MySqlStruct) Model(model any) *ModelStruct {
 
 func (this *ModelStruct) Dest(dest any) *ModelStruct {
 	this.dest = dest
+	return this
+}
+
+func (this *ModelStruct) Scan(dest any) *ModelStruct {
+	this.model.Scan(dest)
 	return this
 }
 
@@ -410,10 +415,6 @@ func (this *ModelStruct) ILike(where any) *ModelStruct {
 		this.Like(slice)
 
 	} else if utils.IsMapAny(where) {
-
-		// for _, val := range cast.ToStringMap(where) {
-		// 	this.WhereLike(val)
-		// }
 
 		var sql string
 		for _, val := range cast.ToStringMap(where) {
@@ -763,7 +764,15 @@ func (this *ModelStruct) Update(data any) (tx *gorm.DB) {
 
 // Save - 保存
 func (this *ModelStruct) Save(data any) (tx *gorm.DB) {
-	return nil
+
+	// 查询是否存在 - 存在则更新，不存在则创建
+	tx = this.model.First(&this.dest)
+	if tx.Error != nil {
+		return NewDB(DBModeMySql).Model(&this.dest).Create(data)
+	}
+
+	// 更新
+	return this.model.Updates(data)
 }
 
 // Force - 真实删除
@@ -773,30 +782,26 @@ func (this *ModelStruct) Force() *ModelStruct {
 }
 
 // Delete - 删除
-func (this *ModelStruct) Delete(args ...any) (ok bool) {
+func (this *ModelStruct) Delete(args ...any) (tx *gorm.DB) {
 
 	if len(args) > 0 {
 
 		// 根据主键删除
 		if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
 			// 根据 id 批量删除
-			this.model.Delete(nil, args[0])
-		} else {
-			// 根据 id 单个删除
-			this.model.Where("id = ?", args[0]).Delete(nil)
+			return this.model.Delete(nil, args[0])
 		}
 
-	} else {
-
-		// 普通删除
-		this.model.Delete(nil)
+		// 根据 id 单个删除
+		return this.model.Where("id = ?", args[0]).Delete(nil)
 	}
 
-	return true
+	// 普通删除
+	return this.model.Delete(nil)
 }
 
 // Destroy - 销毁
-func (this *ModelStruct) Destroy(args ...any) (ok bool) {
+func (this *ModelStruct) Destroy(args ...any) (tx *gorm.DB) {
 
 	// 如果 args 的长度小于 2，扩容
 	if len(args) < 2 {
@@ -815,17 +820,15 @@ func (this *ModelStruct) Destroy(args ...any) (ok bool) {
 
 	if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
 		// 根据 id 批量删除
-		this.model.Delete(nil, args[0])
-	} else {
-		// 根据 id 单个删除
-		this.model.Where("id = ?", args[0]).Delete(nil)
+		return this.model.Delete(nil, args[0])
 	}
 
-	return true
+	// 根据 id 单个删除
+	return this.model.Where("id = ?", args[0]).Delete(nil)
 }
 
 // Restore - 恢复
-func (this *ModelStruct) Restore(args ...any) (ok bool) {
+func (this *ModelStruct) Restore(args ...any) (tx *gorm.DB) {
 
 	if len(args) > 0 {
 		// 根据主键查询
@@ -839,11 +842,5 @@ func (this *ModelStruct) Restore(args ...any) (ok bool) {
 	}
 
 	// 恢复
-	tx := this.model.Unscoped().Update(this.softDelete, this.defaultSoftDelete)
-
-	if tx.Error != nil {
-		return false
-	}
-
-	return true
+	return this.model.Unscoped().Update(this.softDelete, this.defaultSoftDelete)
 }

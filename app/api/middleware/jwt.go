@@ -24,7 +24,7 @@ func Jwt() gin.HandlerFunc {
 
 		method := []any{"POST", "PUT", "DELETE", "PATCH"}
 
-		if utils.InArray(ctx.Request.Method, method) {
+		if utils.InArray[any](ctx.Request.Method, method) {
 
 			result := gin.H{"code": 401, "msg": facade.Lang(ctx, "禁止非法操作！"), "data": nil}
 

@@ -118,11 +118,11 @@ type ModelInterface interface {
 	// Force - 真实删除
 	Force() *ModelStruct
 	// Delete - 删除
-	Delete(args ...any) (ok bool)
+	Delete(args ...any) (tx *gorm.DB)
 	// Destroy - 销毁
-	Destroy(args ...any) (ok bool)
+	Destroy(args ...any) (tx *gorm.DB)
 	// Restore - 恢复
-	Restore(args ...any) (ok bool)
+	Restore(args ...any) (tx *gorm.DB)
 	// Create - 创建
 	Create(data any) (tx *gorm.DB)
 	// Save - 保存
@@ -176,13 +176,13 @@ charset      = "utf8mb4"
 # 表前缀
 prefix       = "unti_"
 # 自动迁移模式
-auto_migrate = true
+migrate 	 = true
 `,
 	}).Read()
 
 	if item.Error != nil {
 		Log.Error(map[string]any{
-			"error": item.Error,
+			"error":     item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,

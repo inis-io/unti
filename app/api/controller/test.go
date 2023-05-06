@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
 	"inis/app/facade"
-	"io"
 	"mime/multipart"
 	"strings"
 	"time"
@@ -97,18 +96,10 @@ func (this *Test) INDEX(ctx *gin.Context) {
 // 测试网络请求
 func (this *Test) request(ctx *gin.Context) {
 
-	params  := this.params(ctx)
-	headers := this.headers(ctx)
-
-	buff, _ := io.ReadAll(ctx.Request.Body)
-
 	this.json(ctx, map[string]any{
-		"method":  ctx.Request.Method,
-		"parse":   params,
-		"body":    string(buff),
-		"from":    ctx.Request.Form,
-		"query":   ctx.Request.URL.Query(),
-		"headers": headers,
+		"method" : ctx.Request.Method,
+		"params" : this.params(ctx),
+		"headers": this.headers(ctx),
 	}, facade.Lang(ctx, "数据请求成功！"), 200)
 }
 
