@@ -20,8 +20,8 @@ type Users struct {
 	Description string                `gorm:"comment:描述; default:Null;" json:"description"`
 	Level       string                `gorm:"size:32; default:'user'; comment:权限;" json:"level"`
 	Source      string                `gorm:"size:32; default:'default'; comment:注册来源;" json:"source"`
-	Json 	  	any                	  `gorm:"type:longtext; comment:用于存储JSON数据;" json:"json"`
-	Result 		any				  	  `gorm:"type:varchar(256); comment:不存储数据，用于封装返回结果;" json:"result"`
+	Json        any                   `gorm:"type:longtext; comment:用于存储JSON数据;" json:"json"`
+	Result      any                   `gorm:"type:varchar(256); comment:不存储数据，用于封装返回结果;" json:"result"`
 	LoginTime   int64                 `gorm:"size:32; comment:登录时间; default:Null;" json:"login_time"`
 	CreateTime  int64                 `gorm:"autoCreateTime; comment:创建时间;" json:"create_time"`
 	UpdateTime  int64                 `gorm:"autoUpdateTime; comment:更新时间;" json:"update_time"`
@@ -29,7 +29,7 @@ type Users struct {
 }
 
 func init() {
-	if cast.ToBool(facade.NewToml("db").Get("mysql.auto_migrate")) {
+	if cast.ToBool(facade.NewToml("db").Get("mysql.migrate")) {
 		err := facade.NewDB("mysql").Drive().AutoMigrate(&Users{})
 		if err != nil {
 			facade.Log.Error(map[string]any{"error": err}, "Users表迁移失败")
@@ -54,8 +54,8 @@ func (this *Users) AfterFind(tx *gorm.DB) (err error) {
 		} else {
 
 			avatars := utils.File(utils.FileRequest{
-				Ext: ".png, .jpg, .jpeg, .gif",
-				Dir: "public/assets/images/avatar/",
+				Ext:    ".png, .jpg, .jpeg, .gif",
+				Dir:    "public/assets/images/avatar/",
 				Domain: fmt.Sprintf("%v/", "https://inis.unti.io"),
 				Prefix: "public/",
 			}).List()
@@ -72,10 +72,10 @@ func (this *Users) AfterFind(tx *gorm.DB) (err error) {
 	}
 
 	this.Result = utils.JsonDecode(utils.JsonEncode(map[string]any{
-		"id": this.Id,
+		"id":    this.Id,
 		"array": []any{1, 2, 3, 4, 5},
 		"map": map[string]any{
-			"key": "value",
+			"key":  "value",
 			"key2": "value2",
 		},
 		"string": "这是封装的拓展字段",

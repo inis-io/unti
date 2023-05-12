@@ -106,8 +106,6 @@ func (this *ModelStruct) Debug(yes ...any) *ModelStruct {
 // Where - 条件
 func (this *ModelStruct) Where(args ...any) *ModelStruct {
 
-	// fmt.Println("where", args, len(args))
-
 	if len(args) >= 3 {
 
 		query := fmt.Sprintf("%v %v ?", args[0], args[1])
@@ -123,20 +121,19 @@ func (this *ModelStruct) Where(args ...any) *ModelStruct {
 		// 判断是否为数组
 		if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
 			// 情况二：二维数组
-			if reflect.TypeOf(args[0].([]any)[0]).Kind() == reflect.Slice {
-				for _, val := range args[0].([]any) {
+			if reflect.TypeOf(cast.ToSlice(args[0])[0]).Kind() == reflect.Slice {
+				for _, val := range cast.ToSlice(args[0]) {
 					this.Where(val)
 				}
 			} else {
 				// 情况一：一维数组
-				this.Where(args[0].([]any)...)
+				this.Where(cast.ToSlice(args[0])...)
 			}
-
 		} else {
 
 			// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
-				str := strings.Split(args[0].(string), " ")
+				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
 					query := fmt.Sprintf("%v %v ?", str[0], str[1])
 					this.model.Where(query, str[2])
@@ -145,19 +142,7 @@ func (this *ModelStruct) Where(args ...any) *ModelStruct {
 				this.model.Where(args[0])
 			}
 		}
-
 	}
-	// else {
-	//
-	// 	// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
-	// 	if reflect.TypeOf(args[0]).Kind() == reflect.String {
-	// 		str := strings.Split(args[0].(string), " ")
-	// 		if len(str) == 3 {
-	// 			query := fmt.Sprintf("%v %v ?", str[0], str[1])
-	// 			this.model.Where(query, str[2])
-	// 		}
-	// 	}
-	// }
 
 	return this
 }
@@ -194,6 +179,67 @@ func (this *ModelStruct) IWhere(where any) *ModelStruct {
 	return this
 }
 
+// WhereIn - 条件
+func (this *ModelStruct) WhereIn(args ...any) *ModelStruct {
+
+	if len(args) >= 3 {
+
+		query := fmt.Sprintf("%v %v (?)", args[0], args[1])
+		this.model.Where(query, args[2])
+
+	} else if len(args) == 2 {
+
+		query := fmt.Sprintf("%v IN (?)", args[0])
+		this.model.Where(query, args[1])
+
+	} else if len(args) == 1 {
+
+		// 判断是否为数组
+		if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
+			// 情况二：二维数组
+			if reflect.TypeOf(cast.ToSlice(args[0])[0]).Kind() == reflect.Slice {
+				for _, val := range cast.ToSlice(args[0]) {
+					this.Where(val)
+				}
+			} else {
+				// 情况一：一维数组
+				this.Where(cast.ToSlice(args[0])...)
+			}
+
+		} else {
+
+			// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
+			if reflect.TypeOf(args[0]).Kind() == reflect.String {
+				str := strings.Split(cast.ToString(args[0]), " ")
+				if len(str) == 3 {
+					query := fmt.Sprintf("%v %v ?", str[0], str[1])
+					this.model.Where(query, str[2])
+				}
+			} else {
+				this.model.Where(args[0])
+			}
+		}
+	}
+
+	return this
+}
+
+// IWhereIn - 断言IN
+func (this *ModelStruct) IWhereIn(where any) *ModelStruct {
+
+	if utils.Is.Empty(where) {
+		return this
+	}
+
+	if utils.IsMapAny(where) {
+		for key, val := range cast.ToStringMap(where) {
+			this.WhereIn(key, val)
+		}
+	}
+
+	return this
+}
+
 // Not - 条件
 func (this *ModelStruct) Not(args ...any) *ModelStruct {
 
@@ -212,20 +258,19 @@ func (this *ModelStruct) Not(args ...any) *ModelStruct {
 		// 判断是否为数组
 		if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
 			// 情况二：二维数组
-			if reflect.TypeOf(args[0].([]any)[0]).Kind() == reflect.Slice {
-				for _, val := range args[0].([]any) {
+			if reflect.TypeOf(cast.ToSlice(args[0])[0]).Kind() == reflect.Slice {
+				for _, val := range cast.ToSlice(args[0]) {
 					this.Not(val)
 				}
 			} else {
 				// 情况一：一维数组
-				this.Not(args[0].([]any)...)
+				this.Not(cast.ToSlice(args[0])...)
 			}
-
 		} else {
 
 			// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
-				str := strings.Split(args[0].(string), " ")
+				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
 					query := fmt.Sprintf("%v %v ?", str[0], str[1])
 					this.model.Not(query, str[2])
@@ -236,7 +281,7 @@ func (this *ModelStruct) Not(args ...any) *ModelStruct {
 
 		// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
 		if reflect.TypeOf(args[0]).Kind() == reflect.String {
-			str := strings.Split(args[0].(string), " ")
+			str := strings.Split(cast.ToString(args[0]), " ")
 			if len(str) == 3 {
 				query := fmt.Sprintf("%v %v ?", str[0], str[1])
 				this.model.Not(query, str[2])
@@ -294,20 +339,19 @@ func (this *ModelStruct) Or(args ...any) *ModelStruct {
 		// 判断是否为数组
 		if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
 			// 情况二：二维数组
-			if reflect.TypeOf(args[0].([]any)[0]).Kind() == reflect.Slice {
-				for _, val := range args[0].([]any) {
+			if reflect.TypeOf(cast.ToSlice(args[0])[0]).Kind() == reflect.Slice {
+				for _, val := range cast.ToSlice(args[0]) {
 					this.Or(val)
 				}
 			} else {
 				// 情况一：一维数组
-				this.Or(args[0].([]any)...)
+				this.Or(cast.ToSlice(args[0])...)
 			}
-
 		} else {
 
 			// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
-				str := strings.Split(args[0].(string), " ")
+				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
 					query := fmt.Sprintf("%v %v ?", str[0], str[1])
 					this.model.Or(query, str[2])
@@ -318,7 +362,7 @@ func (this *ModelStruct) Or(args ...any) *ModelStruct {
 
 		// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
 		if reflect.TypeOf(args[0]).Kind() == reflect.String {
-			str := strings.Split(args[0].(string), " ")
+			str := strings.Split(cast.ToString(args[0]), " ")
 			if len(str) == 3 {
 				query := fmt.Sprintf("%v %v ?", str[0], str[1])
 				this.model.Or(query, str[2])
@@ -371,7 +415,7 @@ func (this *ModelStruct) Like(args ...any) *ModelStruct {
 		// 判断是否为数组
 		if reflect.TypeOf(args[0]).Kind() == reflect.Slice {
 			// 情况二：二维数组
-			if reflect.TypeOf(args[0].([]any)[0]).Kind() == reflect.Slice {
+			if reflect.TypeOf(cast.ToSlice(args[0])[0]).Kind() == reflect.Slice {
 				for _, val := range cast.ToSlice(args[0]) {
 					this.Like(val)
 				}
@@ -383,7 +427,7 @@ func (this *ModelStruct) Like(args ...any) *ModelStruct {
 
 			// 情况三：字符串 - 必须空格分隔且长度为3 - 否则不处理
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
-				str := strings.Split(args[0].(string), " ")
+				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 2 {
 					query := fmt.Sprintf("%v LIKE ?", str[0])
 					this.model.Where(query, str[1])
@@ -435,9 +479,9 @@ func (this *ModelStruct) Null(args ...any) *ModelStruct {
 		if reflect.TypeOf(val).Kind() == reflect.String {
 
 			// 判断是否逗号分隔
-			if strings.Contains(val.(string), ",") {
+			if strings.Contains(cast.ToString(val), ",") {
 				// 逗号分割 去除空格
-				for _, v := range strings.Split(val.(string), ",") {
+				for _, v := range strings.Split(cast.ToString(val), ",") {
 					query := fmt.Sprintf("%v IS NULL", strings.TrimSpace(v))
 					this.model.Where(query)
 				}
@@ -448,7 +492,7 @@ func (this *ModelStruct) Null(args ...any) *ModelStruct {
 
 		} else if reflect.TypeOf(val).Kind() == reflect.Slice {
 
-			this.Null(val.([]any)...)
+			this.Null(cast.ToSlice(val)...)
 		}
 	}
 
@@ -492,9 +536,9 @@ func (this *ModelStruct) NotNull(args ...any) *ModelStruct {
 		if reflect.TypeOf(val).Kind() == reflect.String {
 
 			// 判断是否逗号分隔
-			if strings.Contains(val.(string), ",") {
+			if strings.Contains(cast.ToString(val), ",") {
 				// 逗号分割 去除空格
-				for _, v := range strings.Split(val.(string), ",") {
+				for _, v := range strings.Split(cast.ToString(val), ",") {
 					query := fmt.Sprintf("%v IS NOT NULL", strings.TrimSpace(v))
 					this.model.Where(query)
 				}
@@ -502,10 +546,9 @@ func (this *ModelStruct) NotNull(args ...any) *ModelStruct {
 				query := fmt.Sprintf("%v IS NOT NULL", val)
 				this.model.Where(query)
 			}
-
 		} else if reflect.TypeOf(val).Kind() == reflect.Slice {
 
-			this.NotNull(val.([]any)...)
+			this.NotNull(cast.ToSlice(val)...)
 		}
 	}
 
@@ -588,7 +631,7 @@ func (this *ModelStruct) Limit(limit ...any) *ModelStruct {
 			return this
 		}
 		this.limit = limit[0]
-		this.model.Limit(limit[0].(int))
+		this.model.Limit(cast.ToInt(limit[0]))
 	}
 	return this
 }
@@ -601,7 +644,7 @@ func (this *ModelStruct) Page(page ...any) *ModelStruct {
 			this.model.Limit(1)
 		}
 		this.page = page[0]
-		this.model.Offset((page[0].(int) - 1) * this.limit.(int))
+		this.model.Offset((cast.ToInt(page[0]) - 1) * cast.ToInt(this.limit))
 	}
 	return this
 }
@@ -618,7 +661,7 @@ func (this *ModelStruct) Field(args ...any) *ModelStruct {
 func (this *ModelStruct) WithoutField(args ...any) *ModelStruct {
 	if len(args) > 0 {
 		for _, val := range args {
-			this.model.Omit(val.(string))
+			this.model.Omit(cast.ToString(val))
 		}
 	}
 	return this

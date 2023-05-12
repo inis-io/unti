@@ -25,7 +25,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.645
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.41
 	github.com/unrolled/secure v1.13.0
-	github.com/unti-io/go-utils v1.1.0
+	github.com/unti-io/go-utils v1.1.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/time v0.3.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df

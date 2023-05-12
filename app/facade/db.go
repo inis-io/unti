@@ -63,6 +63,10 @@ type ModelInterface interface {
 	Where(args ...any) *ModelStruct
 	// IWhere - 断言条件
 	IWhere(where any) *ModelStruct
+	// WhereIn - IN查询
+	WhereIn(args ...any) *ModelStruct
+	// IWhereIn - 断言条件
+	IWhereIn(where any) *ModelStruct
 	// Not - 条件
 	Not(args ...any) *ModelStruct
 	// INot - 断言条件

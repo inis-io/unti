@@ -2,6 +2,7 @@ package facade
 
 import (
 	"context"
+	"fmt"
 	"github.com/allegro/bigcache/v3"
 	"github.com/fsnotify/fsnotify"
 	"github.com/redis/go-redis/v9"
@@ -95,7 +96,7 @@ database   = 0
 
 	if item.Error != nil {
 		Log.Error(map[string]any{
-			"error": item.Error,
+			"error":     item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -131,8 +132,8 @@ func initCache() {
 	localClient, err := bigcache.New(context.Background(), bigcache.DefaultConfig(localExpire))
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
-			"stack": string(debugs.Stack()),
+			"error":     err,
+			"stack":     string(debugs.Stack()),
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -196,12 +197,32 @@ type CacheInterface interface {
 	 * @return bool
 	 */
 	Del(key any) (ok bool)
+	// DelPrefix
+	/**
+	 * @name 删除前缀缓存
+	 * @param prefix 缓存的前缀
+	 * @return bool
+	 */
+	DelPrefix(prefix ...any) (ok bool)
+	// DelTags
+	/**
+	 * @name 删除标签缓存
+	 * @param tag 缓存的标签
+	 * @return bool
+	 */
+	DelTags(tag ...any) (ok bool)
+	// Clear
+	/**
+	 * @name 清空缓存
+	 * @return bool
+	 */
+	Clear() (ok bool)
 }
 
 type RedisCacheStruct struct {
-	Client    *redis.Client
-	Prefix    string
-	Expire    time.Duration
+	Client *redis.Client
+	Prefix string
+	Expire time.Duration
 }
 
 func (this *RedisCacheStruct) Has(key any) (ok bool) {
@@ -221,7 +242,7 @@ func (this *RedisCacheStruct) Get(key any) (value any) {
 	return utils.Ternary[any](err != nil, nil, utils.Json.Decode(result))
 }
 
-func (this *RedisCacheStruct) Set(key any, value any, expire ...any) bool {
+func (this *RedisCacheStruct) Set(key any, value any, expire ...any) (ok bool) {
 
 	ctx := context.Background()
 	// 设置过期时间
@@ -234,20 +255,121 @@ func (this *RedisCacheStruct) Set(key any, value any, expire ...any) bool {
 		expire[0] = time.Duration(cast.ToInt(expire[0])) * time.Second
 	}
 
-	err := this.Client.Set(ctx, this.Prefix + cast.ToString(key), utils.Json.Encode(value), cast.ToDuration(expire[0])).Err()
+	err := this.Client.Set(ctx, this.Prefix+cast.ToString(key), utils.Json.Encode(value), cast.ToDuration(expire[0])).Err()
 	return utils.Ternary[bool](err != nil, false, true)
 }
 
-func (this *RedisCacheStruct) Del(key any) bool {
+func (this *RedisCacheStruct) Del(key any) (ok bool) {
 
 	ctx := context.Background()
 	err := this.Client.Del(ctx, this.Prefix+cast.ToString(key)).Err()
 	return utils.Ternary[bool](err != nil, false, true)
 }
 
+func (this *RedisCacheStruct) DelPrefix(prefix ...any) (ok bool) {
+
+	var keys []string
+	var prefixes []string
+	ctx := context.Background()
+
+	if len(prefix) == 0 {
+		return false
+	}
+
+	for _, value := range prefix {
+
+		// 判断是否为切片
+		if reflect.ValueOf(value).Kind() == reflect.Slice {
+			for _, val := range cast.ToSlice(value) {
+				prefixes = append(prefixes, this.Prefix+cast.ToString(val)+"*")
+			}
+		} else {
+			prefixes = append(prefixes, this.Prefix+cast.ToString(value)+"*")
+		}
+	}
+
+	// 获取 prefixes 所有的key
+	for _, val := range prefixes {
+		item, err := this.Client.Keys(ctx, val).Result()
+		if err != nil {
+			return false
+		}
+		keys = append(keys, item...)
+	}
+
+	// 去重 - 去空
+	keys = cast.ToStringSlice(utils.ArrayEmpty(utils.ArrayUnique(keys)))
+
+	if len(keys) > 0 {
+		err := this.Client.Del(ctx, keys...).Err()
+		if err != nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (this *RedisCacheStruct) DelTags(tag ...any) (ok bool) {
+
+	var keys []string
+	var tags []string
+	ctx := context.Background()
+
+	if len(tag) == 0 {
+		return false
+	}
+
+	for _, value := range tag {
+
+		var item string
+
+		// 判断是否为切片
+		if reflect.ValueOf(value).Kind() == reflect.Slice {
+			var tmp []string
+			for _, val := range cast.ToSlice(value) {
+				tmp = append(tmp, cast.ToString(val))
+			}
+			// 数组分割字符串
+			item = strings.Join(tmp, "*")
+		} else {
+			item = cast.ToString(value)
+		}
+		tags = append(tags, fmt.Sprintf("%s*%s*", this.Prefix, item))
+	}
+
+	// 获取 prefixes 所有的key
+	for _, val := range tags {
+		item, err := this.Client.Keys(ctx, val).Result()
+		if err != nil {
+			return false
+		}
+		keys = append(keys, item...)
+	}
+
+	// 去重 - 去空
+	keys = cast.ToStringSlice(utils.ArrayEmpty(utils.ArrayUnique(keys)))
+
+	if len(keys) > 0 {
+		err := this.Client.Del(ctx, keys...).Err()
+		if err != nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (this *RedisCacheStruct) Clear() (ok bool) {
+
+	ctx := context.Background()
+	err := this.Client.FlushDB(ctx).Err()
+	return utils.Ternary[bool](err != nil, false, true)
+}
+
 type LocalCacheStruct struct {
-	Client    *bigcache.BigCache
-	Expire    time.Duration
+	Client *bigcache.BigCache
+	Expire time.Duration
 }
 
 func (this *LocalCacheStruct) Has(key any) (ok bool) {
@@ -268,8 +390,28 @@ func (this *LocalCacheStruct) Set(key any, value any, expire ...any) bool {
 	return utils.Ternary[bool](err != nil, false, true)
 }
 
-func (this *LocalCacheStruct) Del(key any) bool {
+func (this *LocalCacheStruct) Del(key any) (ok bool) {
 
 	err := this.Client.Delete(cast.ToString(key))
 	return utils.Ternary[bool](err != nil, false, true)
+}
+
+func (this *LocalCacheStruct) Clear() (ok bool) {
+
+	err := this.Client.Reset()
+	if err != nil {
+		return false
+	}
+
+	return true
+}
+
+// DelPrefix - 未来实现
+func (this *LocalCacheStruct) DelPrefix(prefix ...any) (ok bool) {
+	return false
+}
+
+// DelTags - 未来实现
+func (this *LocalCacheStruct) DelTags(tag ...any) (ok bool) {
+	return false
 }

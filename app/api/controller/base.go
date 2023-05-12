@@ -6,9 +6,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
+	"hash/fnv"
 	"inis/app/facade"
+	"inis/app/model"
 	"net/http"
 	"reflect"
+	"sort"
+	"strings"
+	"time"
 )
 
 type base struct {
@@ -117,13 +122,22 @@ func (this base) headers(ctx *gin.Context) (result map[string]any) {
 	return
 }
 
-// 获取域名
-func (this base) domain(ctx *gin.Context) (result string) {
-	// 域名
-	result = utils.Ternary[string](ctx.Request.TLS == nil, "http", "https") + "://" + ctx.Request.Host
-	// 存储到缓存中
-	facade.Cache.Set("domain", result, 0)
-	return
+// 从login-token中解析用户信息
+func (this base) user(ctx *gin.Context) (result model.Users) {
+
+	// 表数据结构体
+	table := model.Users{}
+	keys := utils.Struct.Keys(&table)
+
+	if user, ok := ctx.Get("user"); ok {
+		for key, val := range cast.ToStringMap(user) {
+			if utils.InArray(key, keys) && !utils.Is.Empty(val) {
+				utils.Struct.Set(&table, key, val)
+			}
+		}
+	}
+
+	return table
 }
 
 // ============================== 分隔线 ==============================
@@ -139,7 +153,38 @@ func (this cache) enable(ctx *gin.Context) (ok bool) {
 
 // 缓存名称
 func (this cache) name(ctx *gin.Context) (name string) {
-	params := base{}.params(ctx)
-	name = fmt.Sprintf("<%s>%s?%s", ctx.Request.Method, ctx.Request.URL.Path, utils.Format.Query(params))
+
+	// hash 函数
+	hash := func(text any) (result string) {
+		item := fnv.New32()
+		_, err := item.Write([]byte(cast.ToString(text)))
+		return cast.ToString(utils.Ternary[any](err != nil, time.Now(), item.Sum32()))
+	}
+
+	params, _ := ctx.Get("params")
+
+	body := cast.ToStringMap(params)
+
+	// ========== 此处解决 map 无序问题 - 开始 ==========
+	keys := make([]string, 0, len(body))
+	for key := range body {
+		keys = append(keys, key)
+	}
+	// 排序 keys
+	sort.Strings(keys)
+	// ========== 此处解决 map 无序问题 - 开始 ==========
+
+	var buff strings.Builder
+	for _, key := range keys {
+		buff.WriteString(fmt.Sprintf("%v=%v&", key, body[key]))
+	}
+	name = buff.String()
+	// 去掉最后一个 &
+	if !utils.Is.Empty(name) {
+		name = name[:len(name)-1]
+	}
+	// 生产缓存名称
+	name = fmt.Sprintf("<%s>%s?hash=%s", ctx.Request.Method, ctx.Request.URL.Path, cast.ToString(hash(name)))
+
 	return
 }
