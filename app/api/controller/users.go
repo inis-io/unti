@@ -262,7 +262,7 @@ func (this *Users) create(ctx *gin.Context) {
 
 	// 判断邮箱是否已经注册
 	ok := facade.DB.Model(&table).Where("email", params["email"]).FindOrEmpty()
-	if ok {
+	if !ok {
 		this.json(ctx, nil, facade.Lang(ctx, "该邮箱已经注册！"), 400)
 		return
 	}
@@ -270,7 +270,7 @@ func (this *Users) create(ctx *gin.Context) {
 	// 判断账号是否已经注册
 	if !utils.Is.Empty(params["account"]) {
 		ok := facade.DB.Model(&table).Where("account", params["account"]).FindOrEmpty()
-		if ok {
+		if !ok {
 			this.json(ctx, nil, facade.Lang(ctx, "该账号已经注册！"), 400)
 			return
 		}
@@ -372,7 +372,7 @@ func (this *Users) update(ctx *gin.Context) {
 			[]any{"id", "<>", params["id"]},
 			[]any{"email", "=", params["email"]},
 		}).FindOrEmpty()
-		if ok {
+		if !ok {
 			this.json(ctx, nil, facade.Lang(ctx, "邮箱已存在！"), 400)
 			return
 		}

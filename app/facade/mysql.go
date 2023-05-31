@@ -108,12 +108,12 @@ func (this *ModelStruct) Where(args ...any) *ModelStruct {
 
 	if len(args) >= 3 {
 
-		query := fmt.Sprintf("%v %v ?", args[0], args[1])
+		query := fmt.Sprintf("`%v` %v ?", args[0], args[1])
 		this.model.Where(query, args[2])
 
 	} else if len(args) == 2 {
 
-		query := fmt.Sprintf("%v = ?", args[0])
+		query := fmt.Sprintf("`%v` = ?", args[0])
 		this.model.Where(query, args[1])
 
 	} else if len(args) == 1 {
@@ -135,7 +135,7 @@ func (this *ModelStruct) Where(args ...any) *ModelStruct {
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
 				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
-					query := fmt.Sprintf("%v %v ?", str[0], str[1])
+					query := fmt.Sprintf("`%v` %v ?", str[0], str[1])
 					this.model.Where(query, str[2])
 				}
 			} else {
@@ -184,12 +184,12 @@ func (this *ModelStruct) WhereIn(args ...any) *ModelStruct {
 
 	if len(args) >= 3 {
 
-		query := fmt.Sprintf("%v %v (?)", args[0], args[1])
+		query := fmt.Sprintf("`%v` %v (?)", args[0], args[1])
 		this.model.Where(query, args[2])
 
 	} else if len(args) == 2 {
 
-		query := fmt.Sprintf("%v IN (?)", args[0])
+		query := fmt.Sprintf("`%v` IN (?)", args[0])
 		this.model.Where(query, args[1])
 
 	} else if len(args) == 1 {
@@ -212,7 +212,7 @@ func (this *ModelStruct) WhereIn(args ...any) *ModelStruct {
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
 				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
-					query := fmt.Sprintf("%v %v ?", str[0], str[1])
+					query := fmt.Sprintf("`%v` %v ?", str[0], str[1])
 					this.model.Where(query, str[2])
 				}
 			} else {
@@ -245,12 +245,12 @@ func (this *ModelStruct) Not(args ...any) *ModelStruct {
 
 	if len(args) >= 3 {
 
-		query := fmt.Sprintf("%v %v ?", args[0], args[1])
+		query := fmt.Sprintf("`%v` %v ?", args[0], args[1])
 		this.model.Not(query, args[2])
 
 	} else if len(args) == 2 {
 
-		query := fmt.Sprintf("%v = ?", args[0])
+		query := fmt.Sprintf("`%v` = ?", args[0])
 		this.model.Not(query, args[1])
 
 	} else if len(args) == 1 {
@@ -272,7 +272,7 @@ func (this *ModelStruct) Not(args ...any) *ModelStruct {
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
 				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
-					query := fmt.Sprintf("%v %v ?", str[0], str[1])
+					query := fmt.Sprintf("`%v` %v ?", str[0], str[1])
 					this.model.Not(query, str[2])
 				}
 			}
@@ -283,7 +283,7 @@ func (this *ModelStruct) Not(args ...any) *ModelStruct {
 		if reflect.TypeOf(args[0]).Kind() == reflect.String {
 			str := strings.Split(cast.ToString(args[0]), " ")
 			if len(str) == 3 {
-				query := fmt.Sprintf("%v %v ?", str[0], str[1])
+				query := fmt.Sprintf("`%v` %v ?", str[0], str[1])
 				this.model.Not(query, str[2])
 			}
 		}
@@ -326,12 +326,12 @@ func (this *ModelStruct) Or(args ...any) *ModelStruct {
 
 	if len(args) >= 3 {
 
-		query := fmt.Sprintf("%v %v ?", args[0], args[1])
+		query := fmt.Sprintf("`%v` %v ?", args[0], args[1])
 		this.model.Or(query, args[2])
 
 	} else if len(args) == 2 {
 
-		query := fmt.Sprintf("%v = ?", args[0])
+		query := fmt.Sprintf("`%v` = ?", args[0])
 		this.model.Or(query, args[1])
 
 	} else if len(args) == 1 {
@@ -353,7 +353,7 @@ func (this *ModelStruct) Or(args ...any) *ModelStruct {
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
 				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 3 {
-					query := fmt.Sprintf("%v %v ?", str[0], str[1])
+					query := fmt.Sprintf("`%v` %v ?", str[0], str[1])
 					this.model.Or(query, str[2])
 				}
 			}
@@ -364,7 +364,7 @@ func (this *ModelStruct) Or(args ...any) *ModelStruct {
 		if reflect.TypeOf(args[0]).Kind() == reflect.String {
 			str := strings.Split(cast.ToString(args[0]), " ")
 			if len(str) == 3 {
-				query := fmt.Sprintf("%v %v ?", str[0], str[1])
+				query := fmt.Sprintf("`%v` %v ?", str[0], str[1])
 				this.model.Or(query, str[2])
 			}
 		}
@@ -407,7 +407,7 @@ func (this *ModelStruct) Like(args ...any) *ModelStruct {
 
 	if len(args) >= 2 {
 
-		query := fmt.Sprintf("%v LIKE ?", args[0])
+		query := fmt.Sprintf("`%v` LIKE ?", args[0])
 		this.model.Where(query, args[1])
 
 	} else if len(args) == 1 {
@@ -429,7 +429,7 @@ func (this *ModelStruct) Like(args ...any) *ModelStruct {
 			if reflect.TypeOf(args[0]).Kind() == reflect.String {
 				str := strings.Split(cast.ToString(args[0]), " ")
 				if len(str) == 2 {
-					query := fmt.Sprintf("%v LIKE ?", str[0])
+					query := fmt.Sprintf("`%v` LIKE ?", str[0])
 					this.model.Where(query, str[1])
 				}
 			}
@@ -463,7 +463,7 @@ func (this *ModelStruct) ILike(where any) *ModelStruct {
 		var sql string
 		for _, val := range cast.ToStringMap(where) {
 			item := cast.ToSlice(val)
-			sql += fmt.Sprintf("%v LIKE '%v' OR ", item[0], item[1])
+			sql += fmt.Sprintf("`%v` LIKE '%v' OR ", item[0], item[1])
 		}
 		this.model.Where(strings.TrimRight(sql, "OR "))
 	}
@@ -482,11 +482,11 @@ func (this *ModelStruct) Null(args ...any) *ModelStruct {
 			if strings.Contains(cast.ToString(val), ",") {
 				// 逗号分割 去除空格
 				for _, v := range strings.Split(cast.ToString(val), ",") {
-					query := fmt.Sprintf("%v IS NULL", strings.TrimSpace(v))
+					query := fmt.Sprintf("`%v` IS NULL", strings.TrimSpace(v))
 					this.model.Where(query)
 				}
 			} else {
-				query := fmt.Sprintf("%v IS NULL", val)
+				query := fmt.Sprintf("`%v` IS NULL", val)
 				this.model.Where(query)
 			}
 
@@ -539,11 +539,11 @@ func (this *ModelStruct) NotNull(args ...any) *ModelStruct {
 			if strings.Contains(cast.ToString(val), ",") {
 				// 逗号分割 去除空格
 				for _, v := range strings.Split(cast.ToString(val), ",") {
-					query := fmt.Sprintf("%v IS NOT NULL", strings.TrimSpace(v))
+					query := fmt.Sprintf("`%v` IS NOT NULL", strings.TrimSpace(v))
 					this.model.Where(query)
 				}
 			} else {
-				query := fmt.Sprintf("%v IS NOT NULL", val)
+				query := fmt.Sprintf("`%v` IS NOT NULL", val)
 				this.model.Where(query)
 			}
 		} else if reflect.TypeOf(val).Kind() == reflect.Slice {
@@ -606,7 +606,7 @@ func (this *ModelStruct) OnlyTrashed(yes ...any) *ModelStruct {
 	}
 
 	if cast.ToBool(yes[0]) {
-		this.model.Unscoped().Where(fmt.Sprintf("%v <> ?", this.softDelete), this.defaultSoftDelete)
+		this.model.Unscoped().Where(fmt.Sprintf("`%v` <> ?", this.softDelete), this.defaultSoftDelete)
 	}
 
 	return this
@@ -719,6 +719,23 @@ func (this *ModelStruct) Find(args ...any) (result map[string]any) {
 
 // FindOrEmpty - 查询单条
 func (this *ModelStruct) FindOrEmpty(args ...any) (ok bool) {
+
+	if len(args) > 0 {
+		// 根据ID查询
+		this.model.Where("id = ?", args[0])
+	}
+
+	tx := this.model.First(&this.dest)
+
+	if tx.Error != nil {
+		return true
+	}
+
+	return !utils.Ternary[bool](tx.RowsAffected > 0, true, false)
+}
+
+// Exist - 是否存在
+func (this *ModelStruct) Exist(args ...any) (ok bool) {
 
 	if len(args) > 0 {
 		// 根据ID查询

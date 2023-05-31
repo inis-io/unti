@@ -206,7 +206,7 @@ func (this *Comm) register(ctx *gin.Context) {
 		[]any{"source", "=", params["source"]},
 		[]any{"email", "=", params["email"]},
 	}).FindOrEmpty()
-	if ok {
+	if !ok {
 		this.json(ctx, nil, "该邮箱已经注册！", 400)
 		return
 	}
@@ -217,7 +217,7 @@ func (this *Comm) register(ctx *gin.Context) {
 			[]any{"source", "=", params["source"]},
 			[]any{"account", "=", params["account"]},
 		}).FindOrEmpty()
-		if ok {
+		if !ok {
 			this.json(ctx, nil, "该帐号已经注册！", 400)
 			return
 		}
@@ -321,7 +321,7 @@ func (this *Comm) emailLogin(ctx *gin.Context) {
 		[]any{"source", "=", params["source"]},
 		[]any{"email", "=", params["email"]},
 	}).FindOrEmpty()
-	if !ok {
+	if ok {
 		facade.DB.Model(&table).Create(&model.Users{
 			Account:  cast.ToString(params["email"]),
 			Nickname: "会员" + utils.Rand.String(4, "0123456789"),

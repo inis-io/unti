@@ -105,7 +105,9 @@ type ModelInterface interface {
 	Select(args ...any) (result []map[string]any)
 	// Find - 查询单条
 	Find(args ...any) (result map[string]any)
-	// FindOrEmpty - 查询单条
+	// Exist - 是否存在
+	Exist(args ...any) (ok bool)
+	// FindOrEmpty - 是否不存在
 	FindOrEmpty(args ...any) (ok bool)
 	// Count - 统计
 	Count() (result int64)
