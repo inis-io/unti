@@ -3,11 +3,11 @@ package controller
 import (
 	"context"
 	"fmt"
-	// JWT "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-pay/gopay"
 	"github.com/go-pay/gopay/alipay"
 	"github.com/google/uuid"
+	"github.com/unti-io/go-utils/utils"
 	"inis/app/facade"
 	"mime/multipart"
 	"strings"
@@ -101,6 +101,8 @@ func (this *Test) INDEX(ctx *gin.Context) {
 	res := gin.H{
 		"user" : this.meta.user(ctx),
 	}
+
+	fmt.Println(utils.Is.Empty(res["user"]))
 
 	this.json(ctx, res, facade.Lang(ctx, "好的！"), 200)
 }

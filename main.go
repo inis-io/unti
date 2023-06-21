@@ -11,6 +11,11 @@ import (
 	app "inis/config"
 )
 
+/*
+ * Author: 兔子 or racns
+ * Email: 97783391@qq.com or inis.cn66@gmail.com
+ * Desc: 这是一个基于Gin框架和Gorm二次封装的Go语言Web开发框架
+ */
 func main() {
 
 	// 监听服务
