@@ -93,6 +93,11 @@ func (this *Test) INDEX(ctx *gin.Context) {
 	// 请求参数
 	// params := this.params(ctx)
 
+	// 设置缓存
+	facade.Cache.Set("test", "test", 0)
+	// 获取缓存
+	fmt.Println(facade.Cache.Get("test"))
+
 	res := gin.H{
 		"user" : this.meta.user(ctx),
 	}
