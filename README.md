@@ -3,7 +3,7 @@
 > 这是一个上手简单的Go框架，基于 [Gin](https://gin-gonic.com/zh-cn/) 二次开发，数据库基于 [Gorm](https://gorm.io/) ，设计风格参考了 [ThinkPHP 6](https://www.kancloud.cn/manual/thinkphp6_0/1037479)
 
 ### 配置文件
-> 配置文件在 `config` 目录下，分为 `backup.app.toml` 和 `backup.pay.toml` 两个文件，分别用于配置应用和支付，使用前请先修改配置文件内容和文件名，将 `backup.` 去掉，如 `app.toml` 和 `pay.toml`
+> 配置文件在 `config` 目录下
 
 ### 运行
 > 运行前请先安装 [Go](https://golang.org/dl/) ，然后在项目根目录下执行 `go run main.go` 即可   
