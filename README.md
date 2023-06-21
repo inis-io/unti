@@ -32,28 +32,28 @@
 
 ### 目录结构
 ```
-├─app 应用目录
-│  ├─api API应用
-│  │  ├─controller 控制器
-│  │  ├─middleware 局部中间件
-│  │  └─route 路由
-│  ├─dev 开发应用
-│  │  ├─controller 控制器
-│  │  └─route 路由
-│  ├─facade 门面模式
-│  ├─index 前台应用
-│  │  ├─controller 控制器
-│  │  └─route 路由
-│  ├─middleware 全局中间件
-│  ├─model 数据库模型
-│  ├─socket Socket应用
+├─app                应用目录
+│  ├─api             API应用
+│  │  ├─controller   控制器
+│  │  ├─middleware   局部中间件
+│  │  └─route        路由
+│  ├─dev             开发应用
+│  │  ├─controller   控制器
+│  │  └─route        路由
+│  ├─facade          门面模式
+│  ├─index           前台应用
+│  │  ├─controller   控制器
+│  │  └─route        路由
+│  ├─middleware      全局中间件
+│  ├─model           数据库模型
+│  ├─socket          Socket应用
 │  │  ├─controller
 │  │  ├─middleware
 │  │  └─route
-│  └─validator 参数校验器
-├─config 配置文件
-│  └─i18n 多语言
-├─public 静态资源（对外，其他目录均受保护）
+│  └─validator       参数校验器
+├─config             配置文件
+│  └─i18n            多语言
+├─public             静态资源（对外，其他目录均受保护）
 │  ├─assets
 │  │  └─images 
 │  │      ├─avatar
@@ -61,9 +61,9 @@
 │  └─storage
 │      └─rand
 │          └─avatar
-└─runtime 运行时目录
-    ├─cache 缓存
-    └─logs 日志
+└─runtime            运行时目录
+    ├─cache          缓存
+    └─logs           日志
         └─2023-06-21 分片日志
 ```
 
