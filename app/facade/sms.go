@@ -69,64 +69,34 @@ func initSMSToml() {
 		Path: "config",
 		Mode: "toml",
 		Name: "sms",
-		Content: `# ======== SMS 配置 ========
-
-# 默认驱动
-default    = "email"
-
-
-# 邮件服务配置
-[email]
-# 邮件服务器地址
-host     = "smtp.qq.com"
-# 邮件服务端口
-port     = 465
-# 邮件账号
-account  = "97783391@qq.com"
-# 服务密码 - 不是邮箱密码
-password = ""
-# 邮件昵称
-nickname = "兔子"
-# 邮件签名
-sign_name = "萌卜兔"
-
-
-# 阿里云短信服务配置
-[aliyun]
-# 阿里云AccessKey ID
-access_key_id 	  = ""
-# 阿里云AccessKey Secret
-access_key_secret = ""
-# 阿里云短信服务endpoint
-endpoint		  = "dysmsapi.aliyuncs.com"
-# 短信签名
-sign_name         = "萌卜兔"
-# 验证码模板
-verify_code       = ""
-
-
-# 腾讯云短信服务配置
-[tencent]
-# 腾讯云COS SecretId
-secret_id         = ""
-# 腾讯云COS SecretKey
-secret_key        = ""
-# 腾讯云短信服务endpoint
-endpoint          = "sms.tencentcloudapi.com"
-# 腾讯云短信服务appid
-sms_sdk_app_id	  = ""
-# 短信签名
-sign_name         = "萌卜兔"
-# 验证码模板id
-verify_code       = ""
-# 区域
-region            = "ap-guangzhou"
-`,
+		Content: utils.Replace(TempSMS, map[string]any{
+			"${drive.sms}": "email",
+			"${drive.email}": "aliyun",
+			"${drive.default}": "email",
+			"${email.host}": "smtp.qq.com",
+			"${email.port}": 465,
+			"${email.account}": "xxx@qq.com",
+			"${email.password}": "",
+			"${email.nickname}": "unti",
+			"${email.sign_name}": "unti",
+			"${aliyun.access_key_id}": "",
+			"${aliyun.access_key_secret}": "",
+			"${aliyun.endpoint}": "dysmsapi.aliyuncs.com",
+			"${aliyun.sign_name}": "",
+			"${aliyun.verify_code}": "",
+			"${tencent.secret_id}": "",
+			"${tencent.secret_key}": "",
+			"${tencent.endpoint}": "sms.tencentcloudapi.com",
+			"${tencent.sms_sdk_app_id}": "",
+			"${tencent.sign_name}": "",
+			"${tencent.verify_code}": "",
+			"${tencent.region}": "ap-guangzhou",
+		}),
 	}).Read()
 
 	if item.Error != nil {
 		Log.Error(map[string]any{
-			"error": item.Error,
+			"error":     item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -140,11 +110,11 @@ region            = "ap-guangzhou"
 // 初始化SMS
 func initSMS() {
 
-	port     := cast.ToInt(SMSToml.Get("email.port"))
-	host     := cast.ToString(SMSToml.Get("email.host"))
-	account  := cast.ToString(SMSToml.Get("email.account"))
+	port := cast.ToInt(SMSToml.Get("email.port"))
+	host := cast.ToString(SMSToml.Get("email.host"))
+	account := cast.ToString(SMSToml.Get("email.account"))
 	password := cast.ToString(SMSToml.Get("email.password"))
-	GoMail   = &GoMailRequest{
+	GoMail = &GoMailRequest{
 		Client: gomail.NewDialer(host, port, account, password),
 	}
 
@@ -159,7 +129,7 @@ func initSMS() {
 
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -184,7 +154,7 @@ func initSMS() {
 
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -195,7 +165,7 @@ func initSMS() {
 		Client: tencentClient,
 	}
 
-	switch cast.ToString(SMSToml.Get("default")) {
+	switch cast.ToString(SMSToml.Get("drive.default")) {
 	case "email":
 		SMS = GoMail
 	case "aliyun":
@@ -215,8 +185,10 @@ func initSMS() {
  */
 var SMS SMSInterface
 var GoMail *GoMailRequest
+
 // SMSAliYun - 阿里云短信
 var SMSAliYun *AliYunSMS
+
 // SMSTencent - 腾讯云短信
 var SMSTencent *TencentSMS
 
@@ -235,11 +207,11 @@ type SMSInterface interface {
 // SMSResponse - 短信响应
 type SMSResponse struct {
 	// 错误信息
-	Error      error
+	Error error
 	// 结果
-	Result     any
+	Result any
 	// 文本
-	Text       string
+	Text string
 	// 验证码
 	VerifyCode string
 }
@@ -268,23 +240,23 @@ func (this *GoMailRequest) VerifyCode(phone any, code ...any) (response *SMSResp
 	}
 
 	if utils.Is.Empty(this.Template) {
-		this.Template = "您的验证码是：{code}，有效期5分钟。（打死也不要把验证码告诉别人）"
+		this.Template = "您的验证码是：${code}，有效期5分钟。（打死也不要把验证码告诉别人）"
 	}
 
-	item     := gomail.NewMessage()
+	item := gomail.NewMessage()
 	nickname := cast.ToString(SMSToml.Get("email.nickname"))
-	account  := cast.ToString(SMSToml.Get("email.account"))
-	item.SetHeader("From", nickname + "<" + account + ">")
+	account := cast.ToString(SMSToml.Get("email.account"))
+	item.SetHeader("From", nickname+"<"+account+">")
 	// 发送给多个用户
 	item.SetHeader("To", cast.ToString(phone))
 	// 设置邮件主题
 	item.SetHeader("Subject", cast.ToString(SMSToml.Get("email.sign_name")))
 	// 替换验证码
-	this.Template = utils.Replace(this.Template, map[string]any{
-		"{code}": code[0],
+	temp := utils.Replace(this.Template, map[string]any{
+		"${code}": code[0],
 	})
 	// 设置邮件正文
-	item.SetBody("text/html", this.Template)
+	item.SetBody("text/html", temp)
 
 	// 发送邮件
 	err := this.Client.DialAndSend(item)
@@ -318,11 +290,11 @@ func (this *AliYunSMS) VerifyCode(phone any, code ...any) (response *SMSResponse
 
 	params := map[string]any{
 		// 必填，接收短信的手机号码
-		"PhoneNumbers":  tea.String(cast.ToString(phone)),
+		"PhoneNumbers": tea.String(cast.ToString(phone)),
 		// 必填，短信签名名称
-		"SignName":      tea.String(cast.ToString(SMSToml.Get("aliyun.sign_name"))),
+		"SignName": tea.String(cast.ToString(SMSToml.Get("aliyun.sign_name"))),
 		// 必填，短信模板ID
-		"TemplateCode":  tea.String(cast.ToString(SMSToml.Get("aliyun.verify_code"))),
+		"TemplateCode": tea.String(cast.ToString(SMSToml.Get("aliyun.verify_code"))),
 	}
 
 	if len(code) == 0 {
@@ -351,8 +323,8 @@ func (this *AliYunSMS) VerifyCode(phone any, code ...any) (response *SMSResponse
 		return response
 	}
 
-	response.Result 	= result
-	response.Text 		= utils.Json.Encode(result)
+	response.Result = result
+	response.Text = utils.Json.Encode(result)
 	response.VerifyCode = cast.ToString(code[0])
 
 	return response
@@ -362,21 +334,21 @@ func (this *AliYunSMS) VerifyCode(phone any, code ...any) (response *SMSResponse
 func (this *AliYunSMS) ApiInfo() (result *AliYunClient.Params) {
 	return &AliYunClient.Params{
 		// 接口名称
-		Action  : tea.String("SendSms"),
+		Action: tea.String("SendSms"),
 		// 接口版本
-		Version : tea.String("2017-05-25"),
+		Version: tea.String("2017-05-25"),
 		// 接口协议
 		Protocol: tea.String("HTTPS"),
 		// 接口 HTTP 方法
-		Method  : tea.String("POST"),
+		Method:   tea.String("POST"),
 		AuthType: tea.String("AK"),
-		Style   : tea.String("RPC"),
+		Style:    tea.String("RPC"),
 		// 接口 PATH
 		Pathname: tea.String("/"),
 		// 接口请求体内容格式
 		ReqBodyType: tea.String("json"),
 		// 接口响应体内容格式
-		BodyType   : tea.String("json"),
+		BodyType: tea.String("json"),
 	}
 }
 
@@ -404,10 +376,10 @@ func (this *TencentSMS) VerifyCode(phone any, code ...any) (response *SMSRespons
 		code = append(code, utils.Rand.String(6, "0123456789"))
 	}
 
-	request.PhoneNumberSet   = common.StringPtrs([]string{cast.ToString(phone)})
-	request.SmsSdkAppId      = common.StringPtr(cast.ToString(SMSToml.Get("tencent.sms_sdk_app_id")))
-	request.SignName         = common.StringPtr(cast.ToString(SMSToml.Get("tencent.sign_name")))
-	request.TemplateId       = common.StringPtr(cast.ToString(SMSToml.Get("tencent.verify_code")))
+	request.PhoneNumberSet = common.StringPtrs([]string{cast.ToString(phone)})
+	request.SmsSdkAppId = common.StringPtr(cast.ToString(SMSToml.Get("tencent.sms_sdk_app_id")))
+	request.SignName = common.StringPtr(cast.ToString(SMSToml.Get("tencent.sign_name")))
+	request.TemplateId = common.StringPtr(cast.ToString(SMSToml.Get("tencent.verify_code")))
 	request.TemplateParamSet = common.StringPtrs([]string{cast.ToString(code[0])})
 
 	item, err := this.Client.SendSms(request)
@@ -433,8 +405,8 @@ func (this *TencentSMS) VerifyCode(phone any, code ...any) (response *SMSRespons
 	}
 
 	response.VerifyCode = cast.ToString(code[0])
-	response.Text       = item.ToJsonString()
-	response.Result     = utils.Json.Decode(item.ToJsonString())
+	response.Text = item.ToJsonString()
+	response.Result = utils.Json.Decode(item.ToJsonString())
 
 	return response
 }

@@ -1,4 +1,6 @@
 /.idea
 /.vscode
 /runtime
+/dist
 *.exe*
+*.conf

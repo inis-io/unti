@@ -28,10 +28,6 @@ func NewValid(table any, params map[string]any) (err error) {
 	switch strings.ToLower(cast.ToString(table)) {
 	case "users":
 		item = &Users{}
-	case "auth-group":
-		item = &AuthGroup{}
-	case "auth-rules":
-		item = &AuthRules{}
 	default:
 		return errors.New("未知的验证器！")
 	}

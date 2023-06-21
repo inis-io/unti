@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -20,8 +21,8 @@ type MySqlStruct struct {
 	Conn *gorm.DB
 }
 
-// 初始化数据库
-func initMySql() {
+// InitMySQL - 初始化 MySQL 数据库
+func InitMySQL() {
 
 	hostname := cast.ToString(DBToml.Get("mysql.hostname", "localhost"))
 	hostport := cast.ToString(DBToml.Get("mysql.hostport", "3306"))
@@ -29,9 +30,9 @@ func initMySql() {
 	database := cast.ToString(DBToml.Get("mysql.database", ""))
 	password := cast.ToString(DBToml.Get("mysql.password", ""))
 	charset := cast.ToString(DBToml.Get("mysql.charset", "utf8mb4"))
-	prefix := cast.ToString(DBToml.Get("mysql.prefix", "unti_"))
+	prefix := cast.ToString(DBToml.Get("mysql.prefix", "inis_"))
 
-	conn, _ := gorm.Open(mysql.New(mysql.Config{
+	conn, err := gorm.Open(mysql.New(mysql.Config{
 		DSN: fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=True&loc=Local", username, password, hostname, hostport, database, charset),
 		// string 类型字段的默认长度
 		DefaultStringSize: 256,
@@ -53,6 +54,11 @@ func initMySql() {
 		// 关闭终端显示查询信息
 		Logger: logger.Default.LogMode(logger.Silent),
 	})
+
+	if err != nil {
+		panic(fmt.Sprintf("\n\n请检查目录 config/database.toml 下的数据库配置信息是否正确！\n\nMySQL数据库连接失败: %v", err.Error()))
+		return
+	}
 
 	sqlDB, _ := conn.DB()
 	// SetMaxIdleConns 设置空闲连接池中连接的最大数量
@@ -651,19 +657,78 @@ func (this *ModelStruct) Page(page ...any) *ModelStruct {
 
 // Field - 查询字段范围
 func (this *ModelStruct) Field(args ...any) *ModelStruct {
+
 	if len(args) > 0 {
-		this.model.Select(args[0], args[1:]...)
+		for _, val := range args {
+			if utils.Is.String(val) {
+
+				// 构建我们的正则表达式模式
+				pattern := regexp.MustCompile(`[,\s|]+`)
+
+				// 使用正则表达式模式来分隔字符串
+				result := pattern.Split(cast.ToString(val), -1)
+				// 使用 strings.TrimSpace 将分隔后的字符串数组中的元素进行 trim 处理
+				for index, item := range result {
+					result[index] = strings.TrimSpace(item)
+				}
+
+				this.field = append(this.field, result...)
+
+			} else if utils.Is.Slice(val) {
+
+				this.field = append(this.field, cast.ToStringSlice(val)...)
+			}
+		}
 	}
+
+	// 去重 去空
+	this.field = cast.ToStringSlice(utils.ArrayUnique(utils.ArrayEmpty(this.field)))
+
+	var field []string
+
+	// 过滤掉 withoutField 中的字段
+	for _, val := range this.field {
+		if !utils.InArray(val, this.withoutField) {
+			field = append(field, val)
+		}
+	}
+
+	this.model.Select(field)
+
 	return this
 }
 
 // WithoutField - 排除查询字段
 func (this *ModelStruct) WithoutField(args ...any) *ModelStruct {
+
 	if len(args) > 0 {
 		for _, val := range args {
-			this.model.Omit(cast.ToString(val))
+			if utils.Is.String(val) {
+
+				// 构建我们的正则表达式模式
+				pattern := regexp.MustCompile(`[,\s|]+`)
+				// 使用正则表达式模式来分隔字符串
+				result := pattern.Split(cast.ToString(val), -1)
+
+				// 使用 strings.TrimSpace 将分隔后的字符串数组中的元素进行 trim 处理
+				for index, item := range result {
+					result[index] = strings.TrimSpace(item)
+				}
+
+				this.withoutField = append(this.withoutField, result...)
+
+			} else if utils.Is.Slice(val) {
+
+				this.withoutField = append(this.withoutField, cast.ToStringSlice(val)...)
+			}
 		}
 	}
+
+	// 去重 去空
+	this.withoutField = cast.ToStringSlice(utils.ArrayUnique(utils.ArrayEmpty(this.withoutField)))
+
+	this.model.Omit(this.withoutField...)
+
 	return this
 }
 
@@ -812,27 +877,73 @@ func (this *ModelStruct) Min(field string) (result int64) {
 }
 
 // Create - 创建
-func (this *ModelStruct) Create(data any) (tx *gorm.DB) {
-	return this.model.Create(data)
+func (this *ModelStruct) Create(data ...any) (tx *gorm.DB) {
+
+	if len(data) <= 0 {
+		return this.model
+	}
+
+	return this.model.Create(data[0])
 }
 
 // Update - 更新
-func (this *ModelStruct) Update(data any) (tx *gorm.DB) {
-	// 返回主键
-	return this.model.Updates(data)
+func (this *ModelStruct) Update(data ...any) (tx *gorm.DB) {
+
+	if len(data) <= 0 {
+		return this.model
+	}
+
+	return this.model.Updates(data[0])
+}
+
+// Inc - 自增
+func (this *ModelStruct) Inc(column any, step ...int) *ModelStruct {
+
+	size := 1
+
+	if len(step) > 0 {
+		size = step[0]
+	}
+
+	this.model.UpdateColumn("`" + cast.ToString(column) + "`", gorm.Expr("`" + cast.ToString(column) + "` + ?", size))
+
+	return this
+}
+
+// Dec - 自减
+func (this *ModelStruct) Dec(column any, step ...int) *ModelStruct {
+
+	size := 1
+
+	if len(step) > 0 {
+		size = step[0]
+	}
+
+	this.model.UpdateColumn("`" + cast.ToString(column) + "`", gorm.Expr("`" + cast.ToString(column) + "` - ?", size))
+
+	return this
+}
+
+// UpdateColumn - 更新单个字段
+func (this *ModelStruct) UpdateColumn(column any, value any) (tx *gorm.DB) {
+	return this.model.UpdateColumn(cast.ToString(column), value)
 }
 
 // Save - 保存
-func (this *ModelStruct) Save(data any) (tx *gorm.DB) {
+func (this *ModelStruct) Save(data ...any) (tx *gorm.DB) {
+
+	if len(data) <= 0 {
+		return this.model
+	}
 
 	// 查询是否存在 - 存在则更新，不存在则创建
 	tx = this.model.First(&this.dest)
 	if tx.Error != nil {
-		return NewDB(DBModeMySql).Model(&this.dest).Create(data)
+		return NewDB(DBModeMySql).Model(&this.dest).Create(data[0])
 	}
 
 	// 更新
-	return this.model.Updates(data)
+	return this.model.Updates(data[0])
 }
 
 // Force - 真实删除
@@ -902,5 +1013,5 @@ func (this *ModelStruct) Restore(args ...any) (tx *gorm.DB) {
 	}
 
 	// 恢复
-	return this.model.Unscoped().Update(this.softDelete, this.defaultSoftDelete)
+	return this.model.Unscoped().UpdateColumn(this.softDelete, this.defaultSoftDelete)
 }

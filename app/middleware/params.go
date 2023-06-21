@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
+	"inis/app/facade"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -16,22 +17,18 @@ import (
 func Params() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
-		// 判断是否在数组中
-		inArray := func(value any, array []any) bool {
-			for _, val := range array {
-				if val == value {
-					return true
-				}
-			}
-			return false
-		}
+		// 挂载域名信息
+		go domain(ctx)
+		// 挂载IP信息
+		go clientIP(ctx)
+		// 挂载端口号
+		go port(ctx)
 
 		method := ctx.Request.Method
 		params := make(map[string]any)
 
 		// 拷贝一份 body
 		body, _ := io.ReadAll(ctx.Request.Body)
-		// ctx.Request.Body = io.NopCloser(strings.NewReader(string(body)))
 
 		content := map[string]any{
 			"type":  ctx.GetHeader("Content-Type"),
@@ -57,7 +54,7 @@ func Params() gin.HandlerFunc {
 			}
 		}
 
-		if inArray(method, []any{"POST", "PUT", "DELETE", "PATCH"}) {
+		if utils.In.Array(method, []any{"POST", "PUT", "DELETE", "PATCH"}) {
 			if err := ctx.Request.ParseMultipartForm(32 << 20); err != nil {
 				if !errors.Is(err, http.ErrNotMultipart) {
 					// fmt.Println(err)
@@ -156,4 +153,82 @@ func Params() gin.HandlerFunc {
 
 		ctx.Set("params", params)
 	}
+}
+
+// 获取域名
+func domain(ctx *gin.Context) (result string) {
+
+	host := ctx.Request.Header.Get("X-Host")
+	host = utils.Ternary[string](utils.Is.Empty(host), ctx.Request.Host, host)
+
+	// 得到 主机地址 和 端口号
+	info := []string{"localhost", "80"}
+	if strings.Contains(host, ":") {
+		info = strings.Split(host, ":")
+	} else {
+		info[0] = host
+	}
+
+	// 得到 SSL 协议
+	scheme := ctx.Request.Header.Get("X-Scheme")
+	if utils.Is.Empty(scheme) {
+		scheme = utils.Ternary[string](cast.ToInt(info[1]) == 443, "https", "http")
+	}
+
+	// 组装域名
+	result = scheme + "://" + info[0]
+	if !utils.InArray[int](cast.ToInt(info[1]), []int{80, 443}) {
+		result += ":" + info[1]
+	}
+
+	// 存储到缓存中
+	go func() {
+		if cast.ToBool(facade.CacheToml.Get("open")) {
+			facade.Cache.Set("domain", result, 0)
+		}
+		// 存储到上下文中
+		ctx.Set("domain", result)
+	}()
+
+	return result
+}
+
+// 获取客户端IP
+func clientIP(ctx *gin.Context) (result string) {
+
+	// 获取IP
+	result = ctx.Request.Header.Get("X-Real-IP")
+	if utils.Is.Empty(result) {
+		result = ctx.Request.Header.Get("X-Forwarded-For")
+	}
+	if utils.Is.Empty(result) {
+		result = ctx.ClientIP()
+	}
+
+	// 存储到上下文中
+	ctx.Set("ip", result)
+
+	return result
+}
+
+// 获取端口号
+func port(ctx *gin.Context) (result int) {
+
+	host := ctx.Request.Header.Get("X-Host")
+	host = utils.Ternary[string](utils.Is.Empty(host), ctx.Request.Host, host)
+
+	// 得到 主机地址 和 端口号
+	if strings.Contains(host, ":") {
+		info := strings.Split(host, ":")
+		result = cast.ToInt(info[1])
+	}
+
+	if utils.Is.Empty(result) {
+		result = utils.Ternary[int](ctx.Request.Header.Get("X-Scheme") == "https", 443, 80)
+	}
+
+	// 存储到上下文中
+	ctx.Set("port", result)
+
+	return result
 }

@@ -6,17 +6,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
-	"hash/fnv"
 	"inis/app/facade"
 	"inis/app/model"
 	"net/http"
 	"reflect"
 	"sort"
 	"strings"
-	"time"
 )
 
 type base struct {
+	meta
 	cache
 }
 
@@ -83,7 +82,7 @@ func (this base) param(ctx *gin.Context, key string, def ...any) any {
 	return params[key]
 }
 
-// params 获取全部参数 , def map[string]any
+// params 获取全部参数
 func (this base) params(ctx *gin.Context, def ...map[string]any) (result map[string]any) {
 
 	params, ok := ctx.Get("params")
@@ -122,44 +121,31 @@ func (this base) headers(ctx *gin.Context) (result map[string]any) {
 	return
 }
 
-// 从login-token中解析用户信息
-func (this base) user(ctx *gin.Context) (result model.Users) {
-
-	// 表数据结构体
-	table := model.Users{}
-	keys := utils.Struct.Keys(&table)
-
-	if user, ok := ctx.Get("user"); ok {
-		for key, val := range cast.ToStringMap(user) {
-			if utils.InArray(key, keys) && !utils.Is.Empty(val) {
-				utils.Struct.Set(&table, key, val)
-			}
+// 获取 *gin.Context.Get() 中的值
+func (this base) get(ctx *gin.Context, key any, def ...any) (value any) {
+	if item, exist := ctx.Get(cast.ToString(key)); exist {
+		value = item
+	} else {
+		if empty := utils.Is.Empty(def); !empty {
+			value = def[0]
 		}
 	}
-
-	return table
+	return
 }
 
-// ============================== 分隔线 ==============================
+// ============================== cache ==============================
 
 type cache struct{}
 
 // API请求结果是否优先从缓存中获取
 func (this cache) enable(ctx *gin.Context) (ok bool) {
 	item := cast.ToBool(base{}.param(ctx, "cache", "true"))
-	where := item && cast.ToBool(facade.CacheToml.Get("api"))
+	where := item && cast.ToBool(facade.CacheToml.Get("open"))
 	return utils.Ternary[bool](where, true, false)
 }
 
 // 缓存名称
 func (this cache) name(ctx *gin.Context) (name string) {
-
-	// hash 函数
-	hash := func(text any) (result string) {
-		item := fnv.New32()
-		_, err := item.Write([]byte(cast.ToString(text)))
-		return cast.ToString(utils.Ternary[any](err != nil, time.Now(), item.Sum32()))
-	}
 
 	params, _ := ctx.Get("params")
 
@@ -183,8 +169,90 @@ func (this cache) name(ctx *gin.Context) (name string) {
 	if !utils.Is.Empty(name) {
 		name = name[:len(name)-1]
 	}
-	// 生产缓存名称
-	name = fmt.Sprintf("<%s>%s?hash=%s", ctx.Request.Method, ctx.Request.URL.Path, cast.ToString(hash(name)))
 
+	// 生产缓存名称 - 禁止包含（兼容 Windows）：\/:*?"<>|
+	path := strings.Replace(ctx.Request.URL.Path, "/", "_", -1)
+	name = fmt.Sprintf("[%s]%s&hash=%s", ctx.Request.Method, path, facade.Hash.Sum32(name))
 	return
 }
+
+// ============================== 上下文挂载的 meta 信息 ==============================
+
+type meta struct{}
+
+// 从上下文中解析用户信息
+func (this meta) user(ctx *gin.Context) (result model.Users) {
+
+	// 表数据结构体
+	table := model.Users{}
+	keys := utils.Struct.Keys(&table)
+
+	if user, ok := ctx.Get("user"); ok {
+		for key, val := range cast.ToStringMap(user) {
+			if utils.InArray(key, keys) && !utils.Is.Empty(val) {
+				utils.Struct.Set(&table, key, val)
+			}
+		}
+	}
+
+	return table
+}
+
+// 分页限制
+func (this meta) limit(ctx *gin.Context) (result int) {
+
+	// 请求参数
+	params := base{}.params(ctx, map[string]any{
+		"limit": 10,
+	})
+
+	// 配置信息
+	var config map[string]any
+
+	// 缓存名称
+	cacheName  := "config[SYSTEM_PAGE_LIMIT]"
+	// 是否开启了缓存
+	cacheState := cast.ToBool(facade.CacheToml.Get("open"))
+
+	// 检查缓存是否存在
+	if cacheState && facade.Cache.Has(cacheName) {
+
+		config = cast.ToStringMap(facade.Cache.Get(cacheName))
+
+	} else {
+
+		config = map[string]any{
+			"value": 0,
+			"text":  30,
+		}
+		// 存储到缓存中
+		if cacheState {
+			go facade.Cache.Set(cacheName, config)
+		}
+	}
+
+	// 最大限制
+	max   := cast.ToInt(config["text"])
+	// 当前限制
+	limit := cast.ToInt(params["limit"])
+	// 是否开启了限制
+	state := cast.ToBool(config["value"])
+
+	// 限制小于等于 0 - 返回默认值
+	if limit <= 0 {
+		return 10
+	}
+
+	// 没开启限制 - 直接返回
+	if !state {
+		return limit
+	}
+
+	if limit > max {
+		return max
+	}
+
+	return limit
+}
+
+// ============================== 上下文挂载的 meta 信息 ==============================

@@ -14,7 +14,7 @@ func Tls() gin.HandlerFunc {
 
 		// 获取配置文件中的启动端口
 		port := func() string {
-			item := utils.Env().Get("app.port", ":8080")
+			item := utils.Env().Get("app.port", ":8642")
 			result := cast.ToString(item)
 
 			// 判断 result 是否包含 :

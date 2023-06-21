@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
@@ -52,6 +53,9 @@ func (this *Users) IPOST(ctx *gin.Context) {
 		this.json(ctx, nil, facade.Lang(ctx, "方法调用错误：%v", err.Error()), 405)
 		return
 	}
+
+	// 删除缓存
+	go this.delCache()
 }
 
 // IPUT - PUT请求本体
@@ -60,7 +64,7 @@ func (this *Users) IPUT(ctx *gin.Context) {
 	method := strings.ToLower(ctx.Param("method"))
 
 	allow := map[string]any{
-		"update" : this.update,
+		"update":  this.update,
 		"restore": this.restore,
 	}
 	err := this.call(allow, method, ctx)
@@ -69,6 +73,9 @@ func (this *Users) IPUT(ctx *gin.Context) {
 		this.json(ctx, nil, facade.Lang(ctx, "方法调用错误：%v", err.Error()), 405)
 		return
 	}
+
+	// 删除缓存
+	go this.delCache()
 }
 
 // IDEL - DELETE请求本体
@@ -87,6 +94,9 @@ func (this *Users) IDEL(ctx *gin.Context) {
 		this.json(ctx, nil, facade.Lang(ctx, "方法调用错误：%v", err.Error()), 405)
 		return
 	}
+
+	// 删除缓存
+	go this.delCache()
 }
 
 // INDEX - GET请求本体
@@ -94,24 +104,26 @@ func (this *Users) INDEX(ctx *gin.Context) {
 	this.json(ctx, nil, facade.Lang(ctx, "没什么用！"), 202)
 }
 
+// 删除缓存
+func (this *Users) delCache() {
+	// 删除缓存
+	facade.Cache.DelTags([]any{"[GET]", "users"})
+}
+
 // one 获取指定数据
 func (this *Users) one(ctx *gin.Context) {
 
 	code := 204
-	msg  := []string{"无数据！", ""}
+	msg := []string{"无数据！", ""}
 	var data any
 
 	// 获取请求参数
-	params := this.params(ctx, map[string]any{
-		"order":       "create_time desc",
-		"onlyTrashed": false,
-		"withTrashed": false,
-	})
+	params := this.params(ctx)
 
 	// 表数据结构体
 	table := model.Users{}
 	// 允许查询的字段
-	allow := []any{"id", "account", "email"}
+	allow := []any{"id", "email"}
 	// 动态给结构体赋值
 	for key, val := range params {
 		// 防止恶意传入字段
@@ -130,15 +142,18 @@ func (this *Users) one(ctx *gin.Context) {
 
 	} else {
 
-		mold := facade.DB.Model(&table).OnlyTrashed(params["onlyTrashed"]).WithTrashed(params["withTrashed"])
+		mold := facade.DB.Model(&table)
 		mold.IWhere(params["where"]).IOr(params["or"]).ILike(params["like"]).INot(params["not"]).INull(params["null"]).INotNull(params["notNull"])
-		item := mold.Where(table).Order(params["order"]).Find()
-		// 删除指定字段
-		delete(item, "password")
+
+		mold.WithoutField("password")
+
+		item := mold.Where(table).Find()
+
 		// 缓存数据
 		if this.cache.enable(ctx) {
 			go facade.Cache.Set(cacheName, item)
 		}
+
 		data = item
 	}
 
@@ -154,35 +169,31 @@ func (this *Users) one(ctx *gin.Context) {
 func (this *Users) all(ctx *gin.Context) {
 
 	code := 204
-	msg  := []string{"无数据！", ""}
+	msg := []string{"无数据！", ""}
 	var data any
 
 	// 获取请求参数
 	params := this.params(ctx, map[string]any{
-		"page":        1,
-		"limit":       5,
-		"order":       "create_time desc",
-		"onlyTrashed": false,
-		"withTrashed": false,
+		"page":  1,
+		"order": "create_time desc",
 	})
 
 	// 表数据结构体
 	table := model.Users{}
 	// 允许查询的字段
-	allow := []any{"level", "source"}
+	allow := []any{"source"}
 	// 动态给结构体赋值
 	for key, val := range params {
 		// 防止恶意传入字段
 		if utils.In.Array(key, allow) {
-			params[key] = val
 			utils.Struct.Set(&table, key, val)
 		}
 	}
 
-	page  := cast.ToInt(params["page"])
-	limit := cast.ToInt(params["limit"])
+	page := cast.ToInt(params["page"])
+	limit := this.meta.limit(ctx)
 	var result []model.Users
-	mold := facade.DB.Model(&result).OnlyTrashed(params["onlyTrashed"]).WithTrashed(params["withTrashed"])
+	mold := facade.DB.Model(&result)
 	mold.IWhere(params["where"]).IOr(params["or"]).ILike(params["like"]).INot(params["not"]).INull(params["null"]).INotNull(params["notNull"])
 	count := mold.Where(table).Count()
 
@@ -196,20 +207,20 @@ func (this *Users) all(ctx *gin.Context) {
 
 	} else {
 
+		mold.WithoutField("password")
+
 		// 从数据库中获取数据
 		item := mold.Where(table).Limit(limit).Page(page).Order(params["order"]).Select()
-		// 删除指定字段
-		for _, val := range item {
-			delete(val, "password")
-		}
+
 		// 缓存数据
 		if this.cache.enable(ctx) {
 			go facade.Cache.Set(cacheName, item)
 		}
+
 		data = item
 	}
 
-	if data != nil {
+	if !utils.Is.Empty(data) {
 		code = 200
 		msg[0] = "数据请求成功！"
 	}
@@ -250,40 +261,12 @@ func (this *Users) create(ctx *gin.Context) {
 
 	// 表数据结构体
 	table := model.Users{CreateTime: time.Now().Unix(), UpdateTime: time.Now().Unix()}
-	allow := []any{"account", "password", "nickname", "email", "avatar", "description"}
-
-	token, _ := ctx.Get("user")
-	user := cast.ToStringMap(token)
+	allow := []any{"account", "password", "nickname", "email", "phone", "avatar", "description", "source", "pages", "remark", "title", "json", "text"}
 
 	if utils.Is.Empty(params["email"]) {
 		this.json(ctx, nil, facade.Lang(ctx, "邮箱不能为空！"), 400)
 		return
 	}
-
-	// 判断邮箱是否已经注册
-	ok := facade.DB.Model(&table).Where("email", params["email"]).FindOrEmpty()
-	if !ok {
-		this.json(ctx, nil, facade.Lang(ctx, "该邮箱已经注册！"), 400)
-		return
-	}
-
-	// 判断账号是否已经注册
-	if !utils.Is.Empty(params["account"]) {
-		ok := facade.DB.Model(&table).Where("account", params["account"]).FindOrEmpty()
-		if !ok {
-			this.json(ctx, nil, facade.Lang(ctx, "该账号已经注册！"), 400)
-			return
-		}
-	}
-
-	// 权限判断
-	if !utils.In.Array(user["level"], []any{"admin"}) {
-		this.json(ctx, nil, facade.Lang(ctx, "无权限！"), 401)
-		return
-	}
-
-	// 增加允许的字段
-	allow = append(allow, "level", "source")
 
 	// 动态给结构体赋值
 	for key, val := range params {
@@ -298,11 +281,14 @@ func (this *Users) create(ctx *gin.Context) {
 	}
 
 	// 创建用户
-	facade.DB.Model(&table).Create(&table)
+	tx := facade.DB.Model(&table).Create(&table)
 
-	this.json(ctx, map[string]any{
-		"id": table.Id,
-	}, facade.Lang(ctx, "创建成功！"), 200)
+	if tx.Error != nil {
+		this.json(ctx, nil, tx.Error.Error(), 400)
+		return
+	}
+
+	this.json(ctx, gin.H{ "id": table.Id }, facade.Lang(ctx, "创建成功！"), 200)
 }
 
 // update 更新数据
@@ -312,7 +298,7 @@ func (this *Users) update(ctx *gin.Context) {
 	params := this.params(ctx)
 
 	if utils.Is.Empty(params["id"]) {
-		this.json(ctx, nil, facade.Lang(ctx, "id不能为空！"), 400)
+		this.json(ctx, nil, facade.Lang(ctx, "%s 不能为空！", "id"), 400)
 		return
 	}
 
@@ -327,22 +313,7 @@ func (this *Users) update(ctx *gin.Context) {
 
 	// 表数据结构体
 	table := model.Users{}
-	allow := []any{"id", "account", "password", "nickname", "email", "avatar", "description"}
-
-	token, _ := ctx.Get("user")
-	user := cast.ToStringMap(token)
-
-	// 权限判断
-	if !utils.In.Array(user["level"], []any{"admin"}) {
-
-		if cast.ToInt(user["id"]) != cast.ToInt(params["id"]) {
-			this.json(ctx, nil, facade.Lang(ctx, "无权限！"), 401)
-			return
-		}
-	}
-
-	// 增加允许的字段
-	allow = append(allow, "level", "source")
+	allow := []any{"id", "account", "password", "nickname", "email", "phone", "avatar", "description", "json", "text"}
 	async := utils.Async[map[string]any]()
 
 	// 动态给结构体赋值
@@ -357,33 +328,18 @@ func (this *Users) update(ctx *gin.Context) {
 		}
 	}
 
-	// 账号唯一处理
-	if !utils.Is.Empty(params["account"]) {
-		item := facade.DB.Model(&table).Where("account", params["account"]).Find()
-		if item != nil && cast.ToInt(item["id"]) != cast.ToInt(params["id"]) {
-			this.json(ctx, nil, facade.Lang(ctx, "帐号已存在！"), 400)
-			return
-		}
-	}
-
-	// 邮箱唯一处理
-	if !utils.Is.Empty(params["email"]) {
-		ok := facade.DB.Model(&table).Where([]any{
-			[]any{"id", "<>", params["id"]},
-			[]any{"email", "=", params["email"]},
-		}).FindOrEmpty()
-		if !ok {
-			this.json(ctx, nil, facade.Lang(ctx, "邮箱已存在！"), 400)
-			return
-		}
-	}
-
 	// 更新用户
-	facade.DB.Model(&table).Force().Where("id", params["id"]).Update(async.Result())
+	tx := facade.DB.Model(&table).WithTrashed().Where("id", params["id"]).Scan(&table).Update(async.Result())
 
-	this.json(ctx, map[string]any{
-		"id": table.Id,
-	}, facade.Lang(ctx, "更新成功！"), 200)
+	if tx.Error != nil {
+		this.json(ctx, nil, tx.Error.Error(), 400)
+		return
+	}
+
+	// 删除缓存
+	facade.Cache.Del(fmt.Sprintf("user[%v]", params["id"]))
+
+	this.json(ctx, gin.H{ "id": table.Id }, facade.Lang(ctx, "更新成功！"), 200)
 }
 
 // count 统计数据
@@ -394,12 +350,10 @@ func (this *Users) count(ctx *gin.Context) {
 	// 获取请求参数
 	params := this.params(ctx)
 
-	item := facade.DB.Model(&table).OnlyTrashed(params["onlyTrashed"]).WithTrashed(params["withTrashed"])
+	item := facade.DB.Model(&table)
 	item.IWhere(params["where"]).IOr(params["or"]).ILike(params["like"]).INot(params["not"]).INull(params["null"]).INotNull(params["notNull"])
 
-	count := item.Count()
-
-	this.json(ctx, count, facade.Lang(ctx, "查询成功！"), 200)
+	this.json(ctx, item.Count(), facade.Lang(ctx, "查询成功！"), 200)
 }
 
 // column 获取单列数据
@@ -412,26 +366,31 @@ func (this *Users) column(ctx *gin.Context) {
 		"field": "*",
 	})
 
-	item := facade.DB.Model(&table).OnlyTrashed(params["onlyTrashed"]).WithTrashed(params["withTrashed"]).Order(params["order"])
+	item := facade.DB.Model(&table).Order(params["order"])
 	item.IWhere(params["where"]).IOr(params["or"]).ILike(params["like"]).INot(params["not"]).INull(params["null"]).INotNull(params["notNull"])
 
-	// 排除密码
-	if strings.Contains(cast.ToString(params["field"]), "password") {
-		// 转换为数组
-		field := strings.Split(cast.ToString(params["field"]), ",")
-		// 排除密码
-		field = utils.Array.Remove(field, "password")
-		// 转换为字符串
-		params["field"] = strings.Join(field, ",")
-	}
+	item.WithoutField("password")
 
 	if !strings.Contains(cast.ToString(params["field"]), "*") {
 		item.Field(params["field"])
 	}
 
-	item.WithoutField("password")
+	// id 数组 - 参数归一化
+	ids := utils.Unity.Keys(params["ids"])
+	if !utils.Is.Empty(ids) {
+		item.WhereIn("id", ids)
+	}
 
-	this.json(ctx, item.Column(), facade.Lang(ctx, "查询成功！"), 200)
+	code := 200
+	data := item.Column()
+	msg := facade.Lang(ctx, "查询成功！")
+
+	if utils.Is.Empty(data) {
+		code = 204
+		msg = facade.Lang(ctx, "无数据！")
+	}
+
+	this.json(ctx, data, msg, code)
 }
 
 // remove 软删除
@@ -442,25 +401,39 @@ func (this *Users) remove(ctx *gin.Context) {
 	// 获取请求参数
 	params := this.params(ctx)
 
-	if utils.Is.Empty(params["ids"]) {
-		this.json(ctx, nil, facade.Lang(ctx, "ids不能为空！"), 400)
+	// id 数组 - 参数归一化
+	ids := utils.Unity.Ids(params["ids"])
+
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "%s 不能为空！", "ids"), 400)
 		return
 	}
 
-	token, _ := ctx.Get("user")
-	user := cast.ToStringMap(token)
+	if utils.In.Array(this.meta.user(ctx).Id, ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "不能删除自己！"), 400)
+		return
+	}
 
-	// 权限判断
-	if !utils.In.Array(user["level"], []any{"admin"}) {
+	item := facade.DB.Model(&table)
 
-		this.json(ctx, nil, facade.Lang(ctx, "无权限！"), 401)
+	// 得到允许操作的 id 数组
+	ids = utils.Unity.Ids(item.WhereIn("id", ids).Column("id"))
+
+	// 无可操作数据
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "无可操作数据！"), 204)
 		return
 	}
 
 	// 软删除
-	facade.DB.Model(&table).Delete(params["ids"])
+	tx := item.Delete(ids)
 
-	this.json(ctx, nil, facade.Lang(ctx, "删除成功！"), 200)
+	if tx.Error != nil {
+		this.json(ctx, nil, facade.Lang(ctx, "删除失败！"), 400)
+		return
+	}
+
+	this.json(ctx, gin.H{ "ids": ids }, facade.Lang(ctx, "删除成功！"), 200)
 }
 
 // delete 真实删除
@@ -471,25 +444,39 @@ func (this *Users) delete(ctx *gin.Context) {
 	// 获取请求参数
 	params := this.params(ctx)
 
-	if utils.Is.Empty(params["ids"]) {
-		this.json(ctx, nil, facade.Lang(ctx, "ids不能为空！"), 400)
+	// id 数组 - 参数归一化
+	ids := utils.Unity.Ids(params["ids"])
+
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "%s 不能为空！", "ids"), 400)
 		return
 	}
 
-	token, _ := ctx.Get("user")
-	user := cast.ToStringMap(token)
+	if utils.In.Array(this.meta.user(ctx).Id, ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "不能删除自己！"), 400)
+		return
+	}
 
-	// 权限判断
-	if !utils.In.Array(user["level"], []any{"admin"}) {
+	item := facade.DB.Model(&table).WithTrashed()
 
-		this.json(ctx, nil, facade.Lang(ctx, "无权限！"), 401)
+	// 得到允许操作的 id 数组
+	ids = utils.Unity.Ids(item.WhereIn("id", ids).Column("id"))
+
+	// 无可操作数据
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "无可操作数据！"), 204)
 		return
 	}
 
 	// 真实删除
-	facade.DB.Model(&table).Force().Delete(params["ids"])
+	tx := item.Force().Delete(ids)
 
-	this.json(ctx, nil, facade.Lang(ctx, "删除成功！"), 200)
+	if tx.Error != nil {
+		this.json(ctx, nil, facade.Lang(ctx, "删除失败！"), 400)
+		return
+	}
+
+	this.json(ctx, gin.H{ "ids": ids }, facade.Lang(ctx, "删除成功！"), 200)
 }
 
 // clear 清空回收站
@@ -498,19 +485,25 @@ func (this *Users) clear(ctx *gin.Context) {
 	// 表数据结构体
 	table := model.Users{}
 
-	token, _ := ctx.Get("user")
-	user := cast.ToStringMap(token)
+	item  := facade.DB.Model(&table).OnlyTrashed()
 
-	// 权限判断
-	if !utils.In.Array(user["level"], []any{"admin"}) {
-		this.json(ctx, nil, facade.Lang(ctx, "无权限！"), 401)
+	ids := utils.Unity.Ids(item.Column("id"))
+
+	// 无可操作数据
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "无可操作数据！"), 204)
 		return
 	}
 
 	// 找到所有软删除的数据
-	facade.DB.Model(&table).OnlyTrashed().Force().Delete()
+	tx := item.Force().Delete()
 
-	this.json(ctx, nil, facade.Lang(ctx, "清空成功！"), 200)
+	if tx.Error != nil {
+		this.json(ctx, nil, facade.Lang(ctx, "清空失败！"), 400)
+		return
+	}
+
+	this.json(ctx, gin.H{ "ids": ids }, facade.Lang(ctx, "清空成功！"), 200)
 }
 
 // restore 恢复数据
@@ -521,22 +514,32 @@ func (this *Users) restore(ctx *gin.Context) {
 	// 获取请求参数
 	params := this.params(ctx)
 
-	if utils.Is.Empty(params["ids"]) {
-		this.json(ctx, nil, facade.Lang(ctx, "ids不能为空！"), 400)
+	// id 数组 - 参数归一化
+	ids := utils.Unity.Ids(params["ids"])
+
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "%s 不能为空！", "ids"), 400)
 		return
 	}
 
-	token, _ := ctx.Get("user")
-	user := cast.ToStringMap(token)
+	item := facade.DB.Model(&table).OnlyTrashed().WhereIn("id", ids)
 
-	// 权限判断
-	if !utils.In.Array(user["level"], []any{"admin"}) {
-		this.json(ctx, nil, facade.Lang(ctx, "无权限！"), 401)
+	// 得到允许操作的 id 数组
+	ids = utils.Unity.Ids(item.Column("id"))
+
+	// 无可操作数据
+	if utils.Is.Empty(ids) {
+		this.json(ctx, nil, facade.Lang(ctx, "无可操作数据！"), 204)
 		return
 	}
 
 	// 还原数据
-	facade.DB.Model(&table).Restore(params["ids"])
+	tx := facade.DB.Model(&table).OnlyTrashed().Restore(ids)
 
-	this.json(ctx, nil, facade.Lang(ctx, "恢复成功！"), 200)
+	if tx.Error != nil {
+		this.json(ctx, nil, facade.Lang(ctx, "恢复失败！"), 400)
+		return
+	}
+
+	this.json(ctx, gin.H{ "ids": ids }, facade.Lang(ctx, "恢复成功！"), 200)
 }

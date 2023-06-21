@@ -4,142 +4,192 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/md5"
 	"encoding/base64"
 	"errors"
 	"fmt"
-	JWT "github.com/dgrijalva/jwt-go"
 	"github.com/fsnotify/fsnotify"
+	JWT "github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/spf13/cast"
 	"github.com/unti-io/go-utils/utils"
+	"hash/fnv"
 	"time"
 )
 
-// AppToml - APP配置文件
-var AppToml *utils.ViperResponse
+// CryptToml - Crypt配置文件
+var CryptToml *utils.ViperResponse
 
-// initAppToml - 初始化APP配置文件
-func initAppToml() {
+// initCryptToml - 初始化Crypt配置文件
+func initCryptToml() {
+
+	key := fmt.Sprintf("%v-%v", uuid.New().String(), time.Now().Unix())
+	secret := fmt.Sprintf("Unti-%x", md5.Sum([]byte(key)))
+
 	item := utils.Viper(utils.ViperModel{
 		Path: "config",
 		Mode: "toml",
-		Name: "app",
-		Content: `# ======== 基础服务配置 - 修改此文件建议重启服务 ========
-
-# 应用配置
-[app]
-# 项目运行端口
-port        = 1000
-# 调试模式
-debug       = false
-# 版本号
-version     = "2.0.0"
-# 登录token名称（别乱改，别作死）
-token_name  = "unti_login_token"
-
-# JWT加密配置
-[jwt]
-# jwt密钥
-secret   = "unti_api_key"
-# 过期时间(秒)
-expire   = 604800
-
-# API限流器配置
-[qps]
-# 单个接口每秒最大请求数
-point    = 10
-# 全局接口每秒最大请求数
-global   = 50
-`,
+		Name: "crypt",
+		Content: utils.Replace(TempCrypt, map[string]any{
+			"${jwt.key}": 		secret,
+			"${jwt.expire}":    "7 * 24 * 60 * 60",
+			"${jwt.issuer}" :   "unti.io",
+			"${jwt.subject}":   "Unti",
+		}),
 	}).Read()
 
 	if item.Error != nil {
 		Log.Error(map[string]any{
-			"error": item.Error,
+			"error":     item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
-		}, "APP配置初始化错误")
+		}, "Crypt配置初始化错误")
 		return
 	}
 
-	AppToml = &item
+	CryptToml = &item
 }
 
-// 初始化缓存
-func initApp() {
+// 初始化加密配置
+func initCrypt() {
 
 }
 
 func init() {
 	// 初始化配置文件
-	initAppToml()
+	initCryptToml()
 	// 初始化缓存
-	initApp()
+	initCrypt()
 
 	// 监听配置文件变化
-	AppToml.Viper.WatchConfig()
+	CryptToml.Viper.WatchConfig()
 	// 配置文件变化时，重新初始化配置文件
-	AppToml.Viper.OnConfigChange(func(event fsnotify.Event) {
-		initApp()
+	CryptToml.Viper.OnConfigChange(func(event fsnotify.Event) {
+		initCrypt()
 	})
-
-	Jwt.Create = JwtCreate
-	Jwt.Parse  = JwtParse
-}
-
-var Jwt struct {
-	Create func(data map[string]any) (result string, error error)
-	Parse  func(token string) (result JwtStruct)
-}
-
-type configJwt struct {
-	Data map[string]any `json:"data"`
-	JWT.StandardClaims
 }
 
 type JwtStruct struct {
+	request  JwtRequest
+	response JwtResponse
+}
+
+// JwtRequest - JWT请求
+type JwtRequest struct {
+	// 过期时间
+	Expire  int64        `json:"expire"`
+	// 颁发者签名
+	Issuer  string       `json:"issuer"`
+	// 主题
+	Subject string       `json:"subject"`
+	// 密钥
+	Key     string       `json:"key"`
+}
+
+// JwtResponse - JWT响应
+type JwtResponse struct {
+	Text  string         `json:"text"`
 	Data  map[string]any `json:"data"`
-	Error error `json:"error"`
-	Valid int64 `json:"valid"`
+	Error error          `json:"error"`
+	Valid int64          `json:"valid"`
 }
 
-// JwtCreate 创建token
-func JwtCreate(data map[string]any) (result string, err error) {
-	return JWT.NewWithClaims(JWT.SigningMethodHS256, configJwt{
-		Data: data,
-		StandardClaims: JWT.StandardClaims{
-			ExpiresAt:  time.Now().Unix() + cast.ToInt64(AppToml.Get("jwt.expire", "7200")), // 过期时间戳
-			IssuedAt:   time.Now().Unix(),                                                   		   // 当前时间戳
-			Issuer:     cast.ToString(AppToml.Get("jwt.issuer", "unti")),                    // 颁发者签名
-			Subject:    cast.ToString(AppToml.Get("jwt.subject", "unti-io")),                // 签名主题
+// Jwt - 入口
+func Jwt(request ...JwtRequest) *JwtStruct {
+
+	if len(request) == 0 {
+		request = append(request, JwtRequest{})
+	}
+
+	// 过期时间
+	if request[0].Expire == 0 {
+		request[0].Expire = cast.ToInt64(utils.Calc(CryptToml.Get("jwt.expire", "7200")))
+	}
+
+	// 颁发者签名
+	if utils.Is.Empty(request[0].Issuer) {
+		request[0].Issuer = cast.ToString(CryptToml.Get("jwt.issuer", "unti.io"))
+	}
+
+	// 主题
+	if utils.Is.Empty(request[0].Subject) {
+		request[0].Subject = cast.ToString(CryptToml.Get("jwt.subject", "Unti"))
+	}
+
+	// 密钥
+	if utils.Is.Empty(request[0].Key) {
+		request[0].Key = cast.ToString(CryptToml.Get("jwt.key", "Unti"))
+	}
+
+	return &JwtStruct{
+		request: request[0],
+		response: JwtResponse{
+			Data: make(map[string]any),
 		},
-	}).SignedString([]byte(cast.ToString(AppToml.Get("jwt.secret", "inis"))))
+	}
 }
 
-// JwtParse 解析token
-func JwtParse(token string) (result JwtStruct) {
+// Create - 创建JWT
+func (this *JwtStruct) Create(data map[string]any) (result JwtResponse) {
 
-	item, err := JWT.ParseWithClaims(token, &configJwt{}, func(token *JWT.Token) (any, error) {
-		return []byte(cast.ToString(AppToml.Get("jwt.secret", "inis"))), nil
+	type JwtClaims struct {
+		Data map[string]any `json:"data"`
+		JWT.RegisteredClaims
+	}
+
+	IssuedAt  := JWT.NewNumericDate(time.Now())
+	ExpiresAt := JWT.NewNumericDate(time.Now().Add(time.Second * time.Duration(this.request.Expire)))
+
+	item, err := JWT.NewWithClaims(JWT.SigningMethodHS256, JwtClaims{
+		Data: data,
+		RegisteredClaims: JWT.RegisteredClaims{
+			IssuedAt:  IssuedAt,				// 签发时间戳
+			ExpiresAt: ExpiresAt,				// 过期时间戳
+			Issuer:    this.request.Issuer,		// 颁发者签名
+			Subject:   this.request.Subject,	// 签名主题
+		},
+	}).SignedString([]byte(this.request.Key))
+
+	if err != nil {
+		this.response.Error = err
+		return this.response
+	}
+
+	this.response.Text = item
+
+	return this.response
+}
+
+// Parse - 解析JWT
+func (this *JwtStruct) Parse(token any) (result JwtResponse) {
+
+	type JwtClaims struct {
+		Data map[string]any `json:"data"`
+		JWT.RegisteredClaims
+	}
+
+	item, err := JWT.ParseWithClaims(cast.ToString(token), &JwtClaims{}, func(token *JWT.Token) (any, error) {
+		return []byte(this.request.Key), nil
 	})
 
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
 		}, "JWT解析错误")
-		result.Error = err
-		return
+		this.response.Error = err
+		return this.response
 	}
 
-	if key, _ := item.Claims.(*configJwt); item.Valid {
-		result.Data  = key.Data
-		result.Valid = key.StandardClaims.ExpiresAt - time.Now().Unix()
+	if key, _ := item.Claims.(*JwtClaims); item.Valid {
+		this.response.Data  = key.Data
+		this.response.Valid = key.RegisteredClaims.ExpiresAt.Time.Unix() - time.Now().Unix()
 	}
 
-	return
+	return this.response
 }
 
 // CipherRequest - 请求输入
@@ -147,7 +197,7 @@ type CipherRequest struct {
 	// 16位密钥
 	Key string
 	// 16位向量
-	Iv  string
+	Iv string
 }
 
 // CipherResponse - 响应输出
@@ -174,11 +224,11 @@ func (this *CipherRequest) Encrypt(text any) (result *CipherResponse) {
 	result = &CipherResponse{}
 
 	// 拦截异常
-    defer func() {
-        if r := recover(); r != nil {
-            result.Error = fmt.Errorf("%v", r)
-        }
-    }()
+	defer func() {
+		if r := recover(); r != nil {
+			result.Error = fmt.Errorf("%v", r)
+		}
+	}()
 
 	block, err := aes.NewCipher([]byte(this.Key))
 	if err != nil {
@@ -188,10 +238,10 @@ func (this *CipherRequest) Encrypt(text any) (result *CipherResponse) {
 	// 每个块的大小
 	blockSize := block.BlockSize()
 	// 计算需要填充的长度
-	padding   := blockSize - len([]byte(cast.ToString(text))) % blockSize
+	padding := blockSize - len([]byte(cast.ToString(text)))%blockSize
 
 	// 填充
-	fill   := append([]byte(cast.ToString(text)), bytes.Repeat([]byte{byte(padding)}, padding)...)
+	fill := append([]byte(cast.ToString(text)), bytes.Repeat([]byte{byte(padding)}, padding)...)
 	encode := make([]byte, len(fill))
 
 	item := cipher.NewCBCEncrypter(block, []byte(this.Iv))
@@ -206,42 +256,54 @@ func (this *CipherRequest) Encrypt(text any) (result *CipherResponse) {
 // Decrypt 解密
 func (this *CipherRequest) Decrypt(text any) (result *CipherResponse) {
 
-    result = &CipherResponse{}
+	result = &CipherResponse{}
 
 	// 拦截异常
-    defer func() {
-        if r := recover(); r != nil {
-            result.Error = fmt.Errorf("%v", r)
-        }
-    }()
+	defer func() {
+		if r := recover(); r != nil {
+			result.Error = fmt.Errorf("%v", r)
+		}
+	}()
 
-    newText, err := base64.StdEncoding.DecodeString(cast.ToString(text))
-    if err != nil {
-        result.Error = err
-        return
-    }
+	newText, err := base64.StdEncoding.DecodeString(cast.ToString(text))
+	if err != nil {
+		result.Error = err
+		return
+	}
 
-    block, err := aes.NewCipher([]byte(this.Key))
-    if err != nil {
-        result.Error = err
-        return
-    }
+	block, err := aes.NewCipher([]byte(this.Key))
+	if err != nil {
+		result.Error = err
+		return
+	}
 
-    // 确保 newText 是 blockSize 的整数倍
-    blockSize := block.BlockSize()
-    if len(newText) % blockSize != 0 {
-        result.Error = errors.New("invalid ciphertext")
-        return
-    }
+	// 确保 newText 是 blockSize 的整数倍
+	blockSize := block.BlockSize()
+	if len(newText)%blockSize != 0 {
+		result.Error = errors.New("invalid ciphertext")
+		return
+	}
 
-    decode := make([]byte, len(newText))
-    item := cipher.NewCBCDecrypter(block, []byte(this.Iv))
-    item.CryptBlocks(decode, newText)
+	decode := make([]byte, len(newText))
+	item := cipher.NewCBCDecrypter(block, []byte(this.Iv))
+	item.CryptBlocks(decode, newText)
 
-    // 去除填充
-    padding := decode[len(decode)-1]
-    result.Byte = decode[:len(decode)-int(padding)]
-    result.Text = string(result.Byte)
+	// 去除填充
+	padding := decode[len(decode)-1]
+	result.Byte = decode[:len(decode)-int(padding)]
+	result.Text = string(result.Byte)
 
-    return
+	return
+}
+
+type HashStruct struct {}
+
+// Hash - 哈希加密
+var Hash = &HashStruct{}
+
+// Sum32 - 哈希加密
+func (this *HashStruct) Sum32(text any) (result string) {
+	item := fnv.New32()
+	_, err := item.Write([]byte(cast.ToString(text)))
+	return cast.ToString(utils.Ternary[any](err != nil, nil, item.Sum32()))
 }

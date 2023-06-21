@@ -1,7 +1,7 @@
 package validator
 
 type Users struct {
-	Account     string `json:"account" rule:"min=4,max=32"`
+	Account     string `json:"account" rule:"alphaNum,min=4,max=32"`
 	Password    string `json:"password" rule:"min=6,max=32"`
 	Email       string `json:"email" rule:"email"`
 	Nickname    string `json:"nickname" rule:"chsDash,max=32"`

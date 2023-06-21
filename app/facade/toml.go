@@ -14,6 +14,7 @@ const (
 	TomlPay     = "pay"
 	TomlLog     = "log"
 	TomlApp     = "app"
+	TomlCrypt   = "crypt"
 )
 
 // NewToml - 获取配置文件
@@ -38,6 +39,8 @@ func NewToml(mode any) *utils.ViperResponse {
 		return PayToml
 	case TomlLog:
 		return LogToml
+	case TomlCrypt:
+		return CryptToml
 	case TomlApp:
 		return AppToml
 	}

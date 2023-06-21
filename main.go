@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/fsnotify/fsnotify"
 	api "inis/app/api/route"
+	dev "inis/app/dev/route"
+	index "inis/app/index/route"
 	"inis/app/middleware"
 	socket "inis/app/socket/route"
 	app "inis/config"
@@ -18,28 +20,28 @@ func main() {
 
 	// 静默运行 - 不显示控制台
 	// go build -ldflags -H=windowsgui 或 bee pack -ba="-ldflags -H=windowsgui"
+	// 压缩二进制包 - https://github.com/upx/upx/releases
+	// upx -9 -o inis unti
 }
 
 func run() {
 	// 允许跨域
-	app.Engine.Use(middleware.Cors())
+	app.Gin.Use(middleware.Cors())
 	// 注册路由
-	app.Use(api.Route, socket.Route)
+	app.Use(api.Route, dev.Route, index.Route, socket.Route)
 	// 运行服务
 	app.Run()
 }
 
+// 监听配置文件变化
 func watch() {
 
-	// 监听配置文件变化
 	app.AppToml.Viper.WatchConfig()
 	// 配置文件变化时，重新初始化配置文件
 	app.AppToml.Viper.OnConfigChange(func(event fsnotify.Event) {
 
 		// 关闭服务
 		if app.Server != nil {
-			// 释放路由
-			// app.Server.Handler = nil
 			// 关闭服务
 			err := app.Server.Shutdown(nil)
 			if err != nil {

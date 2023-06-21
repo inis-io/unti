@@ -21,30 +21,20 @@ func initPayToml() {
 		Path: "config",
 		Mode: "toml",
 		Name: "pay",
-		Content: `# ======== 支付配置 ========
-
-# 支付宝支付
-[alipay]
-# 支付宝支付的商户ID
-app_id                 = 20210***28
-# 证书根目录
-root_cert_path         = "/config/pay/ali/"
-# 应用私钥
-app_private_key_path   = "appPrivateKey.pem"
-# 支付宝公钥
-alipay_public_key_path = "alipayPublicKey.pem"
-# 异步通知地址
-notify_url = "https://api.inis.cn/api/test/notify"
-# 同步通知地址
-return_url = "https://api.inis.cn/api/test/return"
-# 时区
-time_zone = "Asia/Shanghai"
-`,
+		Content: utils.Replace(TempPay, map[string]any{
+			"${alipay.app_id}": "20210***28",
+			"${alipay.root_cert_path}": "/config/pay/ali/",
+			"${alipay.app_private_key_path}": "appPrivateKey.pem",
+			"${alipay.alipay_public_key_path}" : "alipayPublicKey.pem",
+			"${alipay.notify_url}" : "https://api.inis.cn/api/test/notify",
+			"${alipay.return_url}" : "https://api.inis.cn/api/test/return",
+			"${alipay.time_zone}"  : "Asia/Shanghai",
+		}),
 	}).Read()
 
 	if item.Error != nil {
 		Log.Error(map[string]any{
-			"error": item.Error,
+			"error":     item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -76,7 +66,7 @@ func Alipay() *alipay.Client {
 	client, err := alipay.NewClient(cast.ToString(PayToml.Get("alipay.app_id")), privateKey.Text, true)
 	if err != nil {
 		Log.Error(map[string]any{
-			"err": err,
+			"err":       err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,

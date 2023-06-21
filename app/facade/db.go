@@ -54,6 +54,8 @@ type ModelStruct struct {
 	page              any      // 分页
 	softDelete        string   // 软删除 - 字段
 	defaultSoftDelete any      // 默认软删除 - 值
+	field 		      []string // 查询字段范围
+	withoutField	  []string // 排除查询字段
 }
 
 type ModelInterface interface {
@@ -120,7 +122,7 @@ type ModelInterface interface {
 	// Min - 最小值
 	Min(field string) (result int64)
 	// Update - 更新
-	Update(data any) (tx *gorm.DB)
+	Update(data ...any) (tx *gorm.DB)
 	// Force - 真实删除
 	Force() *ModelStruct
 	// Delete - 删除
@@ -130,23 +132,37 @@ type ModelInterface interface {
 	// Restore - 恢复
 	Restore(args ...any) (tx *gorm.DB)
 	// Create - 创建
-	Create(data any) (tx *gorm.DB)
+	Create(data ...any) (tx *gorm.DB)
 	// Save - 保存
-	Save(data any) (tx *gorm.DB)
+	Save(data ...any) (tx *gorm.DB)
+	// Inc - 自增
+	Inc(column any, step ...int) *ModelStruct
+	// Dec - 自减
+	Dec(column any, step ...int) *ModelStruct
+	// UpdateColumn - 更新单个字段
+	UpdateColumn(column any, value any) (tx *gorm.DB)
 }
 
-func init() {
+// WatchDB - 初始化数据库 - 顺便监听配置文件变化
+func WatchDB(change ...bool) {
+
+	if len(change) == 0 {
+		change = append(change, false)
+	}
+
 	// 初始化配置文件
 	initDBToml()
 	// 初始化数据库
-	initDB()
+	InitDB()
 
-	// 监听配置文件变化
-	DBToml.Viper.WatchConfig()
-	// 配置文件变化时，重新初始化配置文件
-	DBToml.Viper.OnConfigChange(func(event fsnotify.Event) {
-		initDB()
-	})
+	if change[0] {
+		// 监听配置文件变化
+		DBToml.Viper.WatchConfig()
+		// 配置文件变化时，重新初始化配置文件
+		DBToml.Viper.OnConfigChange(func(event fsnotify.Event) {
+			InitDB()
+		})
+	}
 }
 
 // DBToml - 数据库配置文件
@@ -158,32 +174,15 @@ func initDBToml() {
 		Path: "config",
 		Mode: "toml",
 		Name: "database",
-		Content: `# ======== 数据库配置 ========
-
-# 默认数据库配置
-default    = "mysql"
-
-# mysql 数据库配置
-[mysql]
-# 数据库类型
-type         = "mysql"
-# 数据库地址
-hostname     = "localhost"
-# 数据库端口
-hostport     = 3306
-# 数据库用户
-username     = ""
-# 数据库名称
-database     = ""
-# 数据库密码
-password     = ""
-# 数据库编码
-charset      = "utf8mb4"
-# 表前缀
-prefix       = "unti_"
-# 自动迁移模式
-migrate 	 = true
-`,
+		Content: utils.Replace(TempDatabase, map[string]any{
+			"${mysql.hostname}": "localhost",
+			"${mysql.hostport}": 3306,
+			"${mysql.username}": "",
+			"${mysql.database}": "",
+			"${mysql.password}": "",
+			"${mysql.charset}" : "utf8mb4",
+			"${mysql.migrate}" : "true",
+		}),
 	}).Read()
 
 	if item.Error != nil {
@@ -199,9 +198,10 @@ migrate 	 = true
 	DBToml = &item
 }
 
-func initDB() {
+// InitDB - 初始化数据库
+func InitDB() {
 
-	initMySql()
+	InitMySQL()
 
 	switch cast.ToString(DBToml.Get("default")) {
 	case "mysql":

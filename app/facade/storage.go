@@ -38,11 +38,11 @@ const (
 	// StorageModeLocal - 本地存储
 	StorageModeLocal = "local"
 	// StorageModeOSS - OSS存储
-	StorageModeOSS = "oss"
+	StorageModeOSS   = "oss"
 	// StorageModeCOS - COS存储
-	StorageModeCOS = "cos"
+	StorageModeCOS   = "cos"
 	// StorageModeKODO - KODO存储
-	StorageModeKODO = "kodo"
+	StorageModeKODO  = "kodo"
 )
 
 // NewStorage - 创建Storage实例
@@ -78,64 +78,31 @@ func initStorageToml() {
 		Path: "config",
 		Mode: "toml",
 		Name: "storage",
-		Content: `# ======== 存储配置 ========
-
-# 默认存储驱动
-default    = "local"
-
-
-# 本地存储配置
-[local]
-
-
-# 阿里OSS配置
-[oss]
-# 阿里云AccessKey ID
-access_key_id 	  = ""
-# 阿里云AccessKey Secret
-access_key_secret = ""
-# OSS 外网 Endpoint
-endpoint		  = ""
-# OSS Bucket - 存储桶名称
-bucket			  = "unti-io"
-# OSS 外网域名 - 用于访问 - 不填写则使用默认域名
-domain			  = ""
-
-
-# 腾讯云COS配置
-[cos]
-# 腾讯云COS AppId
-app_id            = ""
-# 腾讯云COS SecretId
-secret_id         = ""
-# 腾讯云COS SecretKey
-secret_key        = ""
-# COS Bucket - 存储桶名称
-bucket            = "unti-io"
-# COS 所在地区，如这里的 ap-guangzhou（广州）
-region            = "ap-guangzhou"
-# COS 外网域名 - 用于访问 - 不填写则使用默认域名
-domain            = ""
-
-
-# 七牛云KODO配置
-[kodo]
-# 七牛云AccessKey
-access_key        = ""
-# 七牛云SecretKey
-secret_key        = ""
-# KODO Bucket - 存储桶名称
-bucket            = "unti-io"
-# KODO 所在地区，如这里的华南（广东） z0=华东 z1=华北河北 z2=华南广东 cn-east-2=华东浙江 na0=北美 as0=新加坡 ap-northeast-1=亚太-首尔机房
-region            = "z2"
-# KODO 外网域名 - 用于访问 - 这里必须填写
-domain            = ""
-`,
+		Content: utils.Replace(TempStorage, map[string]any{
+			"${default}": "local",
+			"${local.domain}": "",
+			"${oss.access_key_id}": "",
+			"${oss.access_key_secret}": "",
+			"${oss.endpoint}": "",
+			"${oss.bucket}": "unti-oss",
+			"${oss.domain}": "",
+			"${cos.app_id}": "",
+			"${cos.secret_id}": "",
+			"${cos.secret_key}": "",
+			"${cos.bucket}": "unti-cos",
+			"${cos.region}": "ap-guangzhou",
+			"${cos.domain}": "",
+			"${kodo.access_key}": "",
+			"${kodo.secret_key}": "",
+			"${kodo.bucket}": "unti-kodo",
+			"${kodo.region}": "z2",
+			"${kodo.domain}": "",
+		}),
 	}).Read()
 
 	if item.Error != nil {
 		Log.Error(map[string]any{
-			"error": item.Error,
+			"error":     item.Error,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -149,31 +116,31 @@ domain            = ""
 // 初始化缓存
 func initStorage() {
 
-	accessKeyId 	:= cast.ToString(StorageToml.Get("oss.access_key_id"))
+	accessKeyId := cast.ToString(StorageToml.Get("oss.access_key_id"))
 	accessKeySecret := cast.ToString(StorageToml.Get("oss.access_key_secret"))
-	endpoint 		:= cast.ToString(StorageToml.Get("oss.endpoint"))
+	endpoint := cast.ToString(StorageToml.Get("oss.endpoint"))
 
 	ossClient, err := oss.New(endpoint, accessKeyId, accessKeySecret)
 
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
 		}, "OSS 初始化错误")
 	}
 
-	appId 	  := cast.ToString(StorageToml.Get("cos.app_id"))
-	secretId  := cast.ToString(StorageToml.Get("cos.secret_id"))
+	appId := cast.ToString(StorageToml.Get("cos.app_id"))
+	secretId := cast.ToString(StorageToml.Get("cos.secret_id"))
 	secretKey := cast.ToString(StorageToml.Get("cos.secret_key"))
-	bucket    := cast.ToString(StorageToml.Get("cos.bucket"))
-	region    := cast.ToString(StorageToml.Get("cos.region"))
+	bucket := cast.ToString(StorageToml.Get("cos.bucket"))
+	region := cast.ToString(StorageToml.Get("cos.region"))
 
 	cosUrl, err := url.Parse(fmt.Sprintf("https://%s-%s.cos.%s.myqcloud.com", bucket, appId, region))
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -186,7 +153,7 @@ func initStorage() {
 		// 设置超时时间
 		Timeout: 100 * time.Second,
 		Transport: &cos.AuthorizationTransport{
-			SecretID : secretId,
+			SecretID:  secretId,
 			SecretKey: secretKey,
 		},
 	})
@@ -254,7 +221,7 @@ type StorageInterface interface {
 // =================================== 本地存储存储 - 开始 ===================================
 
 // LocalStorageStruct 本地存储
-type LocalStorageStruct struct {}
+type LocalStorageStruct struct{}
 
 // Upload - 上传文件
 func (this *LocalStorageStruct) Upload(path string, reader io.Reader) (result *StorageResponse) {
@@ -269,14 +236,14 @@ func (this *LocalStorageStruct) Upload(path string, reader io.Reader) (result *S
 	}
 
 	// 去除前面的 public
-	result.Path   = strings.Replace(path, "public", "", 1)
-	result.Domain = "http://localhost:1000"
+	result.Path = strings.Replace(path, "public", "", 1)
+	result.Domain = cast.ToString(StorageToml.Get("local.domain"))
 
 	return
 }
 
 // Path - 本地存储位置 - 生成文件路径
-func (this *LocalStorageStruct) Path() string  {
+func (this *LocalStorageStruct) Path() string {
 	// 生成年月日目录 - 如：2023-04/10
 	dir := time.Now().Format("2006-01/02/")
 	// 生成文件名 - 年月日+毫秒时间戳
@@ -298,7 +265,7 @@ func (this *OSSStruct) Bucket() *oss.Bucket {
 
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -315,7 +282,7 @@ func (this *OSSStruct) Bucket() *oss.Bucket {
 			err = this.Client.CreateBucket(cast.ToString(StorageToml.Get("oss.bucket")))
 			if err != nil {
 				Log.Error(map[string]any{
-					"error": err,
+					"error":     err,
 					"func_name": utils.Caller().FuncName,
 					"file_name": utils.Caller().FileName,
 					"file_line": utils.Caller().Line,
@@ -329,7 +296,7 @@ func (this *OSSStruct) Bucket() *oss.Bucket {
 	bucket, err := this.Client.Bucket(cast.ToString(StorageToml.Get("oss.bucket")))
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -357,7 +324,7 @@ func (this *OSSStruct) Upload(key string, reader io.Reader) (result *StorageResp
 		result.Domain = cast.ToString(StorageToml.Get("oss.domain"))
 	}
 
-	result.Path   = "/" + key
+	result.Path = "/" + key
 
 	return
 }
@@ -386,7 +353,7 @@ func (this *COSStruct) Object() *cos.ObjectService {
 
 	if err != nil {
 		Log.Error(map[string]any{
-			"error": err,
+			"error":     err,
 			"func_name": utils.Caller().FuncName,
 			"file_name": utils.Caller().FileName,
 			"file_line": utils.Caller().Line,
@@ -405,7 +372,7 @@ func (this *COSStruct) Object() *cos.ObjectService {
 			})
 			if err != nil {
 				Log.Error(map[string]any{
-					"error": err,
+					"error":     err,
 					"func_name": utils.Caller().FuncName,
 					"file_name": utils.Caller().FileName,
 					"file_line": utils.Caller().Line,
@@ -440,7 +407,7 @@ func (this *COSStruct) Upload(key string, reader io.Reader) (result *StorageResp
 		result.Domain = cast.ToString(StorageToml.Get("cos.domain"))
 	}
 
-	result.Path   = "/" + key
+	result.Path = "/" + key
 
 	return
 }
@@ -512,7 +479,7 @@ func (this *KODOStruct) Bucket() *qbox.Mac {
 		err := this.CreateBucket()
 		if err != nil {
 			Log.Error(map[string]any{
-				"error": err,
+				"error":     err,
 				"func_name": utils.Caller().FuncName,
 				"file_name": utils.Caller().FileName,
 				"file_line": utils.Caller().Line,
@@ -546,20 +513,20 @@ func (this *KODOStruct) Upload(key string, reader io.Reader) (result *StorageRes
 	}
 
 	// 构建表单上传的对象
-	bucket  := storage.NewFormUploader(&config)
+	bucket := storage.NewFormUploader(&config)
 
 	if region, ok := storage.GetRegionByID(storage.RegionID(regionName)); ok {
 		config.Region = &region
 	}
 
-	body  := storage.PutRet{}
-	err  := bucket.Put(context.Background(), &body, token, key, reader, -1, &storage.PutExtra{})
+	body := storage.PutRet{}
+	err := bucket.Put(context.Background(), &body, token, key, reader, -1, &storage.PutExtra{})
 	if err != nil {
 		result.Error = err
 		return
 	}
 
-	result.Path   = "/" + key
+	result.Path = "/" + key
 
 	domain := cast.ToString(StorageToml.Get("kodo.domain"))
 	if !utils.Is.Empty(domain) {
