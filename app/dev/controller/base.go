@@ -9,7 +9,7 @@ import (
 	"reflect"
 )
 
-type base struct {}
+type base struct{}
 
 type ApiInterface interface {
 	IGET(ctx *gin.Context)
@@ -84,7 +84,8 @@ func (this base) params(ctx *gin.Context, def ...map[string]any) (result map[str
 	// 合并默认参数
 	if empty := utils.Is.Empty(def); !empty {
 		for key, val := range def[0] {
-			if ok := utils.Is.Empty(result[key]); ok {
+			// 如果 result 中不存在 key，则合并
+			if _, ok := result[key]; !ok {
 				result[key] = val
 			}
 		}

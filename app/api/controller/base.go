@@ -92,7 +92,8 @@ func (this base) params(ctx *gin.Context, def ...map[string]any) (result map[str
 	// 合并默认参数
 	if empty := utils.Is.Empty(def); !empty {
 		for key, val := range def[0] {
-			if ok := utils.Is.Empty(result[key]); ok {
+			// 如果 result 中不存在 key，则合并
+			if _, ok := result[key]; !ok {
 				result[key] = val
 			}
 		}
@@ -210,7 +211,7 @@ func (this meta) limit(ctx *gin.Context) (result int) {
 	var config map[string]any
 
 	// 缓存名称
-	cacheName  := "config[SYSTEM_PAGE_LIMIT]"
+	cacheName := "config[SYSTEM_PAGE_LIMIT]"
 	// 是否开启了缓存
 	cacheState := cast.ToBool(facade.CacheToml.Get("open"))
 
@@ -232,7 +233,7 @@ func (this meta) limit(ctx *gin.Context) (result int) {
 	}
 
 	// 最大限制
-	max   := cast.ToInt(config["text"])
+	max := cast.ToInt(config["text"])
 	// 当前限制
 	limit := cast.ToInt(params["limit"])
 	// 是否开启了限制
